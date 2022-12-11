@@ -1,10 +1,16 @@
-module Deck exposing (..)
+module Deck exposing (Deck, decks, takeCard)
 
 import Card exposing (..)
 
 
 type alias Deck =
     List Card
+
+
+decks : Int -> Deck
+decks amount =
+    List.range 0 amount
+        |> List.foldr (\_ -> \acc -> acc ++ newDeck) []
 
 
 newDeck : Deck

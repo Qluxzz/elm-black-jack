@@ -13,16 +13,19 @@ import Random.List
 type Msg
     = ShuffleDeck
     | ShuffledDeck Deck.Deck
+    | TakeCard
 
 
 type alias Model =
-    { deck : Deck.Deck }
+    { deck : Deck.Deck
+    , hand : List Card
+    }
 
 
 main : Program () Model Msg
 main =
     Browser.element
-        { init = \_ -> ( { deck = Deck.newDeck }, Cmd.none )
+        { init = \_ -> ( { deck = Deck.decks 4, hand = [] }, Cmd.none )
         , view = \model -> view model
         , update = update
         , subscriptions = \_ -> Sub.none
@@ -38,19 +41,32 @@ update msg model =
         ShuffledDeck cards ->
             ( { model | deck = cards }, Cmd.none )
 
+        TakeCard ->
+            let
+                ( card, updatedDeck ) =
+                    Deck.takeCard model.deck
+            in
+            ( { model | deck = updatedDeck, hand = card :: model.hand }, Cmd.none )
+
 
 view : Model -> Html.Html Msg
 view model =
-    viewDeck model.deck
+    Html.div []
+        [ Html.button [ Html.Events.onClick ShuffleDeck ] [ Html.text "Shuffle cards!" ]
+        , Html.button [ Html.Events.onClick TakeCard ] [ Html.text "Take card!" ]
+        , Html.div [ Html.Attributes.style "display" "flex" ]
+            [ viewDeck model.deck
+            , viewDeck model.hand
+            ]
+        ]
 
 
 viewDeck : Deck.Deck -> Html.Html Msg
 viewDeck cards =
     Html.div []
-        ([ Html.button [ Html.Events.onClick ShuffleDeck ] [ Html.text "Shuffle cards!" ] ]
-            ++ List.map
-                cardView
-                cards
+        (List.map
+            cardView
+            cards
         )
 
 
