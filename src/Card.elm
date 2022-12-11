@@ -39,7 +39,7 @@ value : Card -> CardValue
 value card =
     case card.value of
         Ace ->
-            Double 1 10
+            Double 1 11
 
         Two ->
             Single 2
