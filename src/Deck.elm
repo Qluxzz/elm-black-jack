@@ -1,4 +1,4 @@
-module Deck exposing (Deck, decks, takeCard)
+module Deck exposing (Deck, decks, takeCards)
 
 import Card exposing (..)
 
@@ -33,11 +33,6 @@ newDeck =
         suites
 
 
-takeCard : Deck -> ( Card, Deck )
-takeCard cards =
-    case cards of
-        first :: rest ->
-            ( first, rest )
-
-        [] ->
-            Debug.todo "Empty deck!"
+takeCards : Deck -> Int -> ( List Card, Deck )
+takeCards cards amount =
+    ( List.take amount cards, List.drop amount cards )
