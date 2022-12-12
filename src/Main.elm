@@ -69,6 +69,11 @@ type PlayerType
     | AI -- TODO: Strategies/Personalities
 
 
+
+-- Should this be split up into one "game loop" per state?
+-- That way the HitOrStand game could have it's own messages, and doesn't need to know about other game state messages
+
+
 type GameState
     = ShuffleCards -- Only done at start and if not enough cards left for a new round, TODO: Implement cutting the deck?
     | Betting
