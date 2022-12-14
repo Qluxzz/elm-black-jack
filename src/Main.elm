@@ -4,7 +4,6 @@ import Browser
 import Card exposing (Card, Suit(..), Value(..))
 import Deck
 import Dict
-import Game.Betting exposing (PlayerId)
 import Hand
 import Html
 import Html.Attributes
@@ -28,6 +27,10 @@ import Random.List
 
    If the dealer busts, all players not busted win.
 -}
+
+
+type alias PlayerId =
+    Int
 
 
 type alias Dollars =
