@@ -59,8 +59,8 @@ type alias Model =
     { state : GameState
     , deck : Deck.Deck
     , dealer : Dealer
-    , players : Dict.Dict Int Player
-    , currentPlayer : Int
+    , players : Dict.Dict PlayerId Player
+    , currentPlayer : PlayerId
     }
 
 
@@ -75,11 +75,6 @@ type alias Player =
 type PlayerType
     = Real
     | AI -- TODO: Strategies/Personalities
-
-
-
--- Should this be split up into one "game loop" per state?
--- That way the HitOrStand game could have it's own messages, and doesn't need to know about other game state messages
 
 
 type GameState
