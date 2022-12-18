@@ -3,7 +3,7 @@ module Main exposing (main)
 import Browser
 import Card exposing (Card, Suit(..), Value(..))
 import Deck
-import Dict
+import Dict exposing (Dict)
 import Hand
 import Html
 import Html.Attributes
@@ -33,6 +33,10 @@ type alias PlayerId =
     Int
 
 
+type alias HandId =
+    Int
+
+
 type alias Dollars =
     Int
 
@@ -59,16 +63,28 @@ type alias Model =
     { state : GameState
     , deck : Deck.Deck
     , dealer : Dealer
-    , players : Dict.Dict PlayerId Player
+    , players : Dict PlayerId Player
     , currentPlayer : PlayerId
     }
 
 
+type HandState
+    = Playing
+    | Busted
+
+
+type alias Hand =
+    { cards : List Card
+    , bet : Int
+    , state : HandState
+    }
+
+
 type alias Player =
-    { hands : List (List Card)
+    { hands : Dict HandId Hand
     , money : Int
-    , currentBet : Int
     , type_ : PlayerType
+    , selectedHand : HandId
     }
 
 
@@ -92,10 +108,10 @@ init =
       , players =
             Dict.fromList
                 [ ( 0
-                  , { type_ = Real
+                  , { type_ = AI
                     , money = 5
-                    , currentBet = 0
-                    , hands = []
+                    , hands = Dict.empty
+                    , selectedHand = 0
                     }
                   )
                 ]
@@ -119,48 +135,6 @@ main =
         , update = update
         , subscriptions = \_ -> Sub.none
         }
-
-
-deal : Deck.Deck -> List Player -> ( Deck.Deck, Dealer, List Player )
-deal deck players =
-    let
-        ( updatedDeck, updatedPlayers ) =
-            List.foldr
-                (\player ->
-                    \( d, p ) ->
-                        let
-                            ( cards, d2 ) =
-                                Deck.takeCards d 2
-
-                            updatedPlayer : Player
-                            updatedPlayer =
-                                { player | hands = [ cards ] }
-                        in
-                        ( d2, updatedPlayer :: p )
-                )
-                ( deck, [] )
-                players
-
-        ( updatedDeck2, updatedDealer ) =
-            let
-                ( cards, d ) =
-                    Deck.takeCards updatedDeck 2
-            in
-            ( d, cards )
-    in
-    ( updatedDeck2, updatedDealer, updatedPlayers )
-
-
-updatePlayer_ :
-    Dict.Dict PlayerId Player
-    -> PlayerId
-    -> (Player -> Player)
-    -> Dict.Dict PlayerId Player
-updatePlayer_ players index new =
-    Dict.update
-        index
-        (\player -> player |> Maybe.map new)
-        players
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -187,10 +161,6 @@ update msg model =
             ( { model | deck = deck, state = Betting }, Cmd.none )
 
         {- Betting -}
-        -- Need to know which player
-        -- Remove bet amount from player money
-        -- Set amount as bet
-        -- Continue to next player
         Bet amount ->
             ( { model
                 | state =
@@ -199,7 +169,7 @@ update msg model =
 
                     else
                         model.state
-                , players = updatePlayer (\p -> { p | currentBet = amount, money = p.money - amount })
+                , players = updatePlayer (\p -> { p | hands = Dict.fromList [ ( 0, { bet = amount, cards = [], state = Playing } ) ], money = p.money - amount })
                 , currentPlayer = nextPlayer
               }
             , Cmd.none
@@ -213,7 +183,9 @@ update msg model =
             in
             ( { model
                 | deck = deck
-                , players = updatePlayer (\p -> { p | hands = [ cards ] })
+                , players =
+                    updatePlayer
+                        (\p -> { p | hands = Dict.update p.selectedHand (\h -> h |> Maybe.map (\hand -> { hand | cards = cards })) p.hands })
                 , currentPlayer = nextPlayer
                 , state =
                     if changeState then
@@ -229,31 +201,7 @@ update msg model =
         -- Add card to player hand
         -- Need to know which hand, if player has multiple
         TakeCard ->
-            let
-                ( card, deck ) =
-                    Deck.takeCards model.deck 1
-
-                updatedPlayers =
-                    updatePlayer
-                        (\p ->
-                            { p
-                                | hands =
-                                    p.hands
-                                        |> List.head
-                                        |> Maybe.map
-                                            (\hand ->
-                                                -- TODO: Inform player that they have bust
-                                                if Tuple.first (Hand.value (hand ++ card)) > 21 then
-                                                    []
-
-                                                else
-                                                    [ hand ++ card ]
-                                            )
-                                        |> Maybe.withDefault [ card ]
-                            }
-                        )
-            in
-            ( { model | deck = deck, players = updatedPlayers }, Cmd.none )
+            ( model, Cmd.none )
 
         -- Continue to next player
         -- Stand on which hand?
@@ -273,25 +221,15 @@ update msg model =
         -- Split current player hands into two, allow player to take a card/stand/split/doubledown on each hand
         Split ->
             let
+                currentBet =
+                    model.players
+
                 updatedPlayers =
                     updatePlayer
                         (\p ->
                             { p
                                 | hands =
-                                    case p.hands of
-                                        first :: _ ->
-                                            case first of
-                                                first_card :: second_card :: _ ->
-                                                    [ [ first_card ], [ second_card ] ]
-
-                                                [ _ ] ->
-                                                    []
-
-                                                [] ->
-                                                    []
-
-                                        [] ->
-                                            []
+                                    Dict.empty
                             }
                         )
             in
@@ -340,23 +278,13 @@ playerView state player =
             HitOrStand ->
                 Html.div []
                     (List.map
-                        handView
-                        player.hands
+                        (handView player.money)
+                        (Dict.values player.hands)
                     )
 
             _ ->
                 Html.text ""
         ]
-
-
-canSplit : Hand.Hand -> Bool
-canSplit hand =
-    case hand of
-        first :: second :: _ ->
-            first.value == second.value
-
-        _ ->
-            False
 
 
 handValue : Hand.Hand -> String
@@ -372,20 +300,20 @@ handValue hand =
            )
 
 
-handView : Hand.Hand -> Html.Html Msg
-handView hand =
+handView : Dollars -> Hand -> Html.Html Msg
+handView money { cards, bet } =
     Html.div []
-        (List.map cardView hand
-            ++ [ Html.p [] [ Html.text (handValue hand) ]
+        (List.map cardView cards
+            ++ [ Html.p [] [ Html.text (handValue cards) ]
                , Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
                     [ Html.button [ Html.Events.onClick TakeCard ] [ Html.text "Take a card" ]
                     , Html.button [ Html.Events.onClick Stand ] [ Html.text "Stand" ]
-                    , if canSplit hand then
+                    , if canSplit cards && money > bet then
                         Html.button [ Html.Events.onClick Split ] [ Html.text "Split" ]
 
                       else
                         Html.text ""
-                    , if List.length hand == 2 then
+                    , if List.length cards == 2 then
                         Html.button [ Html.Events.onClick DoubleDown ] [ Html.text "Double down" ]
 
                       else
@@ -397,69 +325,63 @@ handView hand =
 
 cardView : Card -> Html.Html msg
 cardView card =
-    let
-        symbol : Card -> Html.Html msg
-        symbol { suite } =
-            let
-                black s =
-                    Html.span [] [ Html.text s ]
+    Html.div [] [ suiteView card, Html.span [] [ Html.text (Card.valueString card) ] ]
 
-                red s =
-                    Html.span [ Html.Attributes.style "color" "red" ] [ Html.text s ]
-            in
-            case suite of
-                Clubs ->
-                    black "♣"
+
+
+-- HELPER FUNCTIONS
+
+
+updatePlayer_ :
+    Dict PlayerId Player
+    -> PlayerId
+    -> (Player -> Player)
+    -> Dict PlayerId Player
+updatePlayer_ players index new =
+    Dict.update
+        index
+        (Maybe.map new)
+        players
+
+
+canSplit : Hand.Hand -> Bool
+canSplit hand =
+    case hand of
+        first :: second :: _ ->
+            first.value == second.value
+
+        _ ->
+            False
+
+
+suiteView : Card -> Html.Html msg
+suiteView card =
+    let
+        span : List (Html.Attribute msg) -> String -> Html.Html msg
+        span attr s =
+            Html.span attr [ Html.text s ]
+
+        black =
+            span []
+
+        red =
+            span [ Html.Attributes.style "color" "red" ]
+
+        symbol =
+            Card.suiteString card
+
+        color =
+            case card.suite of
+                Spades ->
+                    black
 
                 Diamonds ->
-                    red "♦"
+                    red
 
                 Hearts ->
-                    red "♥"
+                    red
 
-                Spades ->
-                    black "♠"
-
-        value : Card -> String
-        value c =
-            case c.value of
-                Ace ->
-                    "A"
-
-                Two ->
-                    "2"
-
-                Three ->
-                    "3"
-
-                Four ->
-                    "4"
-
-                Five ->
-                    "5"
-
-                Six ->
-                    "6"
-
-                Seven ->
-                    "7"
-
-                Eight ->
-                    "8"
-
-                Nine ->
-                    "9"
-
-                Ten ->
-                    "10"
-
-                Jack ->
-                    "J"
-
-                Queen ->
-                    "Q"
-
-                King ->
-                    "K"
+                Clubs ->
+                    black
     in
-    Html.div [] [ symbol card, Html.span [] [ Html.text (value card) ] ]
+    color symbol
