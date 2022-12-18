@@ -76,3 +76,62 @@ value card =
 
         King ->
             Single 10
+
+
+valueString : Card -> String
+valueString card =
+    case card.value of
+        Ace ->
+            "A"
+
+        Two ->
+            "2"
+
+        Three ->
+            "3"
+
+        Four ->
+            "4"
+
+        Five ->
+            "5"
+
+        Six ->
+            "6"
+
+        Seven ->
+            "7"
+
+        Eight ->
+            "8"
+
+        Nine ->
+            "9"
+
+        Ten ->
+            "10"
+
+        Jack ->
+            "J"
+
+        Queen ->
+            "Q"
+
+        King ->
+            "K"
+
+
+suiteString : Card -> String
+suiteString card =
+    case card.suite of
+        Clubs ->
+            "♣"
+
+        Diamonds ->
+            "♦"
+
+        Hearts ->
+            "♥"
+
+        Spades ->
+            "♠"
