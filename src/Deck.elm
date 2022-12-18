@@ -1,4 +1,4 @@
-module Deck exposing (Deck, decks, takeCards)
+module Deck exposing (Deck, decks, takeCard, takeCards)
 
 import Card exposing (..)
 
@@ -36,3 +36,8 @@ newDeck =
 takeCards : Deck -> Int -> ( List Card, Deck )
 takeCards cards amount =
     ( List.take amount cards, List.drop amount cards )
+
+
+takeCard : Deck -> ( List Card, Deck )
+takeCard cards =
+    takeCards cards 1
