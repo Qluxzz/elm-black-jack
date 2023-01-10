@@ -6,7 +6,7 @@ import Deck
 import Dict exposing (Dict)
 import Hand
 import Html
-import Html.Attributes
+import Html.Attributes exposing (style)
 import Html.Events
 import Process
 import Random
@@ -379,24 +379,32 @@ update msg model =
 view : Model -> Html.Html Msg
 view model =
     Html.div []
-        [ dealerView model.dealer model.state
-        , Html.div [ Html.Attributes.style "display" "flex" ]
-            (List.map (playerView model.state) (Dict.values model.players))
-        ]
+        (dealerView model.dealer model.state
+            :: List.map (playerView model.state) (Dict.values model.players)
+        )
 
 
 dealerView : Dealer -> GameState -> Html.Html Msg
 dealerView dealer state =
     if state == Result then
-        Html.div [] (List.map cardView dealer ++ [ Html.p [] [ Html.text (handValue dealer) ] ])
+        Html.div []
+            [ Html.div [ Html.Attributes.class "cards" ] (List.map cardView dealer)
+            , Html.p [] [ Html.text (handValue dealer) ]
+            ]
 
     else
         case List.head dealer of
             Just card ->
-                Html.div [] [ cardView card, Html.p [] [ Html.text (handValue [ card ]) ] ]
+                Html.div []
+                    [ Html.div [ Html.Attributes.class "cards" ]
+                        [ cardView card
+                        , hiddenCardView
+                        ]
+                    , Html.p [] [ Html.text (handValue [ card ]) ]
+                    ]
 
             Nothing ->
-                Html.div [] [ Html.p [] [ Html.text "Dealer has no cards yet" ] ]
+                Html.p [] [ Html.text "Dealer has no cards yet" ]
 
 
 playerView : GameState -> Player -> Html.Html Msg
@@ -438,29 +446,41 @@ handValue hand =
 handView : Dollars -> Hand -> Html.Html Msg
 handView money { cards, bet, state } =
     Html.div []
-        (List.map cardView cards
-            ++ [ Html.p [] [ Html.text (handValue cards) ]
-               , Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
-                    [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Take a card" ]
-                    , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Stand" ]
-                    , if canSplit cards && money > bet then
-                        Html.button [ Html.Events.onClick Split, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Split" ]
+        [ Html.div []
+            [ Html.div [ Html.Attributes.class "cards" ]
+                (List.map cardView cards)
+            , Html.p [] [ Html.text (handValue cards) ]
+            ]
+        , Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
+            [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Take a card" ]
+            , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Stand" ]
+            , if canSplit cards && money > bet then
+                Html.button [ Html.Events.onClick Split, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Split" ]
 
-                      else
-                        Html.text ""
-                    , if List.length cards == 2 then
-                        Html.button [ Html.Events.onClick DoubleDown, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Double down" ]
+              else
+                Html.text ""
+            , if List.length cards == 2 then
+                Html.button [ Html.Events.onClick DoubleDown, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Double down" ]
 
-                      else
-                        Html.text ""
-                    ]
-               ]
-        )
+              else
+                Html.text ""
+            ]
+        ]
+
+
+cardView_ : List (Html.Html msg) -> Html.Html msg
+cardView_ =
+    Html.div [ Html.Attributes.class "card" ]
 
 
 cardView : Card -> Html.Html msg
 cardView card =
-    Html.div [] [ suiteView card, Html.span [] [ Html.text (Card.valueString card) ] ]
+    cardView_ [ suiteView card, Html.span [] [ Html.text (Card.valueString card) ] ]
+
+
+hiddenCardView : Html.Html msg
+hiddenCardView =
+    cardView_ []
 
 
 
