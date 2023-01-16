@@ -146,6 +146,16 @@ update msg model =
     let
         updatePlayer =
             updatePlayer_ model.players model.currentPlayer
+
+        allHandsHaveCond players cond =
+            players
+                |> Dict.values
+                |> List.all
+                    (\p ->
+                        p.hands
+                            |> Dict.values
+                            |> List.all (\h -> cond h)
+                    )
     in
     case msg of
         ShuffleDeck ->
@@ -161,7 +171,7 @@ update msg model =
                     updatePlayer (\p -> { p | hands = Dict.fromList [ ( 0, { bet = amount, cards = [], state = Playing } ) ], money = p.money - amount })
 
                 allHandsHaveBet =
-                    updatedPlayers |> Dict.values |> List.all (\p -> p.hands |> Dict.values |> List.all (\h -> h.bet /= 0))
+                    allHandsHaveCond updatedPlayers (\h -> h.bet /= 0)
             in
             ( { model
                 | state =
@@ -205,25 +215,11 @@ update msg model =
                         |> Maybe.withDefault False
 
                 allHandsHaveOneCard =
-                    updatedPlayers
-                        |> Dict.values
-                        |> List.all
-                            (\p ->
-                                p.hands
-                                    |> Dict.values
-                                    |> List.all (\h -> List.length h.cards == 1)
-                            )
+                    allHandsHaveCond updatedPlayers (\h -> List.length h.cards == 1)
                         |> Debug.log "All players have one cards"
 
                 allHandsHaveTwoCards =
-                    updatedPlayers
-                        |> Dict.values
-                        |> List.all
-                            (\p ->
-                                p.hands
-                                    |> Dict.values
-                                    |> List.all (\h -> List.length h.cards == 2)
-                            )
+                    allHandsHaveCond updatedPlayers (\h -> List.length h.cards == 2)
                         |> Debug.log "All players have two cards"
             in
             ( { model
@@ -295,9 +291,7 @@ update msg model =
                         )
 
                 allPlayersStandingOrBusted =
-                    updatedPlayers
-                        |> Dict.values
-                        |> List.all (\p -> p.hands |> Dict.values |> List.all (\h -> List.member h.state [ Standing, Busted ]))
+                    allHandsHaveCond updatedPlayers (\h -> List.member h.state [ Standing, Busted ])
                         |> Debug.log "All players standing or busted"
             in
             ( { model
@@ -335,45 +329,68 @@ update msg model =
                         )
 
                 allPlayersStandingOrBusted =
-                    updatedPlayers
-                        |> Dict.values
-                        |> List.all (\p -> p.hands |> Dict.values |> List.all (\h -> List.member h.state [ Standing, Busted ]))
+                    allHandsHaveCond updatedPlayers (\h -> List.member h.state [ Standing, Busted ])
                         |> Debug.log "All players standing or busted"
-            in
-            ( { model
-                | players = updatedPlayers
-                , state =
+
+                newState =
                     if allPlayersStandingOrBusted then
                         Result
 
                     else
                         model.state
+            in
+            ( { model
+                | players = updatedPlayers
+                , state = newState
               }
             , Cmd.none
             )
 
         -- Split current player hands into two, allow player to take a card/stand/split/doubledown on each hand
         Split ->
-            let
-                currentBet =
-                    model.players
-
-                updatedPlayers =
-                    model.players
-
-                -- updatePlayer
-                --     (\p ->
-                --         { p
-                --             | hands =
-                --                 Dict.empty
-                --         }
-                --     )
-            in
-            ( { model | players = updatedPlayers }, Cmd.none )
+            ( model, Cmd.none )
 
         -- Double bet and take another card
         DoubleDown ->
-            ( model, Cmd.none )
+            let
+                currentPlayer =
+                    Dict.get model.currentPlayer model.players
+
+                currentBet =
+                    currentPlayer
+                        |> Maybe.andThen (\p -> Dict.get p.selectedHand p.hands |> Maybe.map (\h -> h.bet))
+
+                ( cards, deck ) =
+                    Deck.takeCard model.deck
+
+                updatedPlayers =
+                    updatePlayer
+                        (\p ->
+                            let
+                                nextHand =
+                                    if p.selectedHand + 1 == Dict.size p.hands then
+                                        0
+
+                                    else
+                                        p.selectedHand + 1
+                            in
+                            { p
+                                | hands =
+                                    updateHand p.hands
+                                        p.selectedHand
+                                        (\h ->
+                                            { h
+                                                | state = Standing
+                                                , bet = h.bet * 2
+                                                , cards = h.cards ++ cards
+                                            }
+                                        )
+                                , money = p.money - (Maybe.map (\b -> b * 2) currentBet |> Maybe.withDefault 0)
+                                , selectedHand = nextHand
+                            }
+                        )
+            in
+            ( { model | players = updatedPlayers, deck = deck }, Cmd.none )
 
 
 view : Model -> Html.Html Msg
@@ -480,7 +497,11 @@ handView money { cards, bet, state } =
               else
                 Html.text ""
             , if List.length cards == 2 then
-                Html.button [ Html.Events.onClick DoubleDown, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Double down" ]
+                Html.button
+                    [ Html.Events.onClick DoubleDown
+                    , Html.Attributes.disabled ((state /= Playing) || bet * 2 > money)
+                    ]
+                    [ Html.text "Double down" ]
 
               else
                 Html.text ""
