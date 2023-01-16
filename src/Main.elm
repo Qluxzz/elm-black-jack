@@ -384,26 +384,46 @@ view model =
         )
 
 
+cardView_ : Bool -> List (Html.Html msg) -> Html.Html msg
+cardView_ hidden =
+    Html.div [ Html.Attributes.class "card", Html.Attributes.classList [ ( "hidden", hidden ) ] ]
+
+
+cardView : Bool -> Card -> Html.Html msg
+cardView hidden card =
+    cardView_ hidden [ suiteView card, Html.span [] [ Html.text (Card.valueString card) ] ]
+
+
 dealerView : Dealer -> GameState -> Html.Html Msg
 dealerView dealer state =
     if state == Result then
         Html.div []
-            [ Html.div [ Html.Attributes.class "cards" ] (List.map cardView dealer)
+            [ Html.div [ Html.Attributes.class "cards" ] (List.map (cardView False) dealer)
             , Html.p [] [ Html.text (handValue dealer) ]
             ]
 
     else
-        case List.head dealer of
-            Just card ->
+        case dealer of
+            first :: [] ->
                 Html.div []
                     [ Html.div [ Html.Attributes.class "cards" ]
-                        [ cardView card
-                        , hiddenCardView
+                        [ cardView False first
                         ]
-                    , Html.p [] [ Html.text (handValue [ card ]) ]
+                    , Html.p [] [ Html.text (handValue [ first ]) ]
                     ]
 
-            Nothing ->
+            first :: second :: rest ->
+                Html.div []
+                    [ Html.div [ Html.Attributes.class "cards" ]
+                        ([ cardView False first
+                         , cardView (state /= Result) second
+                         ]
+                            ++ List.map (cardView False) rest
+                        )
+                    , Html.p [] [ Html.text (handValue [ first ]) ]
+                    ]
+
+            [] ->
                 Html.p [] [ Html.text "Dealer has no cards yet" ]
 
 
@@ -448,7 +468,7 @@ handView money { cards, bet, state } =
     Html.div []
         [ Html.div []
             [ Html.div [ Html.Attributes.class "cards" ]
-                (List.map cardView cards)
+                (List.map (cardView False) cards)
             , Html.p [] [ Html.text (handValue cards) ]
             ]
         , Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
@@ -466,21 +486,6 @@ handView money { cards, bet, state } =
                 Html.text ""
             ]
         ]
-
-
-cardView_ : List (Html.Html msg) -> Html.Html msg
-cardView_ =
-    Html.div [ Html.Attributes.class "card" ]
-
-
-cardView : Card -> Html.Html msg
-cardView card =
-    cardView_ [ suiteView card, Html.span [] [ Html.text (Card.valueString card) ] ]
-
-
-hiddenCardView : Html.Html msg
-hiddenCardView =
-    cardView_ []
 
 
 

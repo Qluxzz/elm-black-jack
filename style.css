@@ -73,6 +73,19 @@ h6 {
     padding: 5px;
 }
 
+.hidden:after {
+    content: "";
+    display: block;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: snow;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+}
+
 .card:not(:first-child) {
     margin-left: -60px;
 }
