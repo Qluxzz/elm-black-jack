@@ -78,60 +78,60 @@ value card =
             Single 10
 
 
-valueString : Card -> String
-valueString card =
+valueToCssClass : Card -> String
+valueToCssClass card =
     case card.value of
         Ace ->
-            "A"
+            "ace"
 
         Two ->
-            "2"
+            "two"
 
         Three ->
-            "3"
+            "three"
 
         Four ->
-            "4"
+            "four"
 
         Five ->
-            "5"
+            "five"
 
         Six ->
-            "6"
+            "six"
 
         Seven ->
-            "7"
+            "seven"
 
         Eight ->
-            "8"
+            "eight"
 
         Nine ->
-            "9"
+            "nine"
 
         Ten ->
-            "10"
+            "ten"
 
         Jack ->
-            "J"
+            "jack"
 
         Queen ->
-            "Q"
+            "queen"
 
         King ->
-            "K"
+            "king"
 
 
-suiteString : Card -> String
-suiteString card =
+suiteToCssClass : Card -> String
+suiteToCssClass card =
     case card.suite of
         Clubs ->
-            "♣"
+            "clubs"
 
         Diamonds ->
-            "♦"
+            "diamonds"
 
         Hearts ->
-            "♥"
+            "hearts"
 
         Spades ->
-            "♠"
+            "spades"

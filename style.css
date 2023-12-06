@@ -58,19 +58,14 @@ h6 {
 
 /* Write code here */
 
+:root {
+    --red-suite: red;
+    --black-suite: black;
+}
+
 .cards {
     display: flex;
     justify-content: center;
-}
-
-.card {
-    width: 100px;
-    aspect-ratio: 56 / 87;
-    border-radius: 10px;
-    border: 1px solid #ccc;
-    background: snow;
-    color: black;
-    padding: 5px;
 }
 
 .hidden:after {
@@ -104,4 +99,167 @@ body>div {
     flex-direction: column;
     align-items: center;
     justify-content: space-around;
+}
+
+.card {
+    aspect-ratio: 2.25 / 3.5;
+    width: 100px;
+    background: white;
+    border-radius: 10px;
+    border: 1px solid black;
+    position: relative;
+    line-height: 1;
+    box-shadow: 0 0 10px #333;
+    color: black;
+    font-variant-numeric: tabular-nums;
+}
+
+/* SUITES */
+
+.color {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.color::before {
+    position: absolute;
+    font-size: 32px;
+    left: -3px;
+    top: 32px;
+}
+
+.color::after {
+    position: absolute;
+    font-size: 32px;
+    width: 26px;
+    right: 5px;
+    bottom: 32px;
+    transform: scale(1, -1);
+}
+
+
+.spades::before,
+.spaces::after {
+    content: '♠';
+    color: var(--black-suite);
+}
+
+.clubs::before,
+.clubs::after {
+    content: '♣';
+    color: var(--black-suite);
+}
+
+.hearts::before,
+.hearts::after {
+    content: '♥';
+    color: var(--red-suite);
+}
+
+.diamonds::before,
+.diamonds::after {
+    content: '♦';
+    color: var(--red-suite);
+}
+
+
+
+/* VALUES */
+
+.value {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.value::before,
+.value::after {
+    font-size: 32px;
+    position: absolute;
+}
+
+.value::before {
+    left: 5px;
+    top: 5px;
+}
+
+.value::after {
+    right: 5px;
+    bottom: 5px;
+    transform: scale(1, -1);
+}
+
+.ace::before,
+.ace::after {
+    content: 'A';
+}
+
+.one::before,
+.one::after {
+    content: '1';
+}
+
+.two::before,
+.two::after {
+    content: '2';
+}
+
+.three::before,
+.three::after {
+    content: '3';
+}
+
+.four::before,
+.four::after {
+    content: '4';
+}
+
+.five::before,
+.five::after {
+    content: '5';
+}
+
+.six::before,
+.six::after {
+    content: '6';
+}
+
+.seven::before,
+.seven::after {
+    content: '7';
+}
+
+.eight::before,
+.eight::after {
+    content: '8';
+}
+
+.nine::before,
+.nine::after {
+    content: '9';
+}
+
+.ten::before,
+.ten::after {
+    content: '10';
+}
+
+.jack::before,
+.jack::after {
+    content: 'J';
+}
+
+.queen::before,
+.queen::after {
+    content: 'Q';
+}
+
+.king::before,
+.king::after {
+    content: 'K';
 }

@@ -6,7 +6,7 @@ import Deck
 import Dict exposing (Dict)
 import Hand
 import Html
-import Html.Attributes exposing (style)
+import Html.Attributes
 import Html.Events
 import Process
 import Random
@@ -401,14 +401,12 @@ view model =
         )
 
 
-cardView_ : Bool -> List (Html.Html msg) -> Html.Html msg
-cardView_ hidden =
-    Html.div [ Html.Attributes.class "card", Html.Attributes.classList [ ( "hidden", hidden ) ] ]
-
-
 cardView : Bool -> Card -> Html.Html msg
 cardView hidden card =
-    cardView_ hidden [ suiteView card, Html.span [] [ Html.text (Card.valueString card) ] ]
+    Html.div [ Html.Attributes.class "card", Html.Attributes.classList [ ( "hidden", hidden ) ] ]
+        [ Html.div [ Html.Attributes.class "color", Html.Attributes.class (Card.suiteToCssClass card) ] []
+        , Html.div [ Html.Attributes.class "value", Html.Attributes.class (Card.valueToCssClass card) ] []
+        ]
 
 
 dealerView : Dealer -> GameState -> Html.Html Msg
@@ -545,36 +543,3 @@ canSplit hand =
 
         _ ->
             False
-
-
-suiteView : Card -> Html.Html msg
-suiteView card =
-    let
-        span : List (Html.Attribute msg) -> String -> Html.Html msg
-        span attr s =
-            Html.span attr [ Html.text s ]
-
-        black =
-            span []
-
-        red =
-            span [ Html.Attributes.style "color" "red" ]
-
-        symbol =
-            Card.suiteString card
-
-        color =
-            case card.suite of
-                Spades ->
-                    black
-
-                Diamonds ->
-                    red
-
-                Hearts ->
-                    red
-
-                Clubs ->
-                    black
-    in
-    color symbol
