@@ -13,17 +13,18 @@ decks amount =
         |> List.foldr (\_ -> \acc -> acc ++ newDeck) []
 
 
+suites : List Card.Suit
+suites =
+    [ Clubs, Diamonds, Hearts, Spades ]
+
+
+values : List Card.Value
+values =
+    [ Ace, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King ]
+
+
 newDeck : Deck
 newDeck =
-    let
-        suites : List Card.Suit
-        suites =
-            [ Clubs, Diamonds, Hearts, Spades ]
-
-        values : List Card.Value
-        values =
-            [ Ace, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King ]
-    in
     List.foldr
         (\suite ->
             \acc ->
@@ -33,11 +34,11 @@ newDeck =
         suites
 
 
-takeCards : Deck -> Int -> ( List Card, Deck )
-takeCards cards amount =
+takeCards : Int -> Deck -> ( List Card, Deck )
+takeCards amount cards =
     ( List.take amount cards, List.drop amount cards )
 
 
 takeCard : Deck -> ( List Card, Deck )
-takeCard cards =
-    takeCards cards 1
+takeCard =
+    takeCards 1
