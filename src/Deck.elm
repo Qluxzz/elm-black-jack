@@ -9,7 +9,7 @@ type alias Deck =
 
 decks : Int -> Deck
 decks amount =
-    List.range 0 amount
+    List.range 1 amount
         |> List.foldr (\_ -> \acc -> acc ++ newDeck) []
 
 
