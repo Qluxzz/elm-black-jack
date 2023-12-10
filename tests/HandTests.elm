@@ -6,16 +6,6 @@ import Hand
 import Test exposing (..)
 
 
-createCard : Card.Suit -> Card.Value -> Card.Card
-createCard s v =
-    Card.Card s v
-
-
-card : Card.Value -> Card.Card
-card =
-    createCard Card.Clubs
-
-
 cases : List ( ( Hand.Hand, Hand.Hand ), Order )
 cases =
     [ ( ( [ card Card.Ace, card Card.King ], [ card Card.Ace, card Card.King ] ), EQ )
@@ -35,3 +25,17 @@ suite =
             )
             cases
         )
+
+
+
+-- HELPERS
+
+
+createCard : Card.Suit -> Card.Value -> Card.Card
+createCard s v =
+    Card.Card s v
+
+
+card : Card.Value -> Card.Card
+card =
+    createCard Card.Clubs
