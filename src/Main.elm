@@ -105,25 +105,35 @@ type GameState
     | Result
 
 
+initalState : Model
+initalState =
+    { deck = []
+    , dealer = []
+    , players =
+        Dict.fromList
+            [ ( 0
+              , { type_ = AI
+                , money = 5
+                , hands = Dict.empty
+                , selectedHand = 0
+                }
+              )
+            ]
+    , currentPlayer = 0
+    , state = ShuffleCards
+    }
+
+
+{-| Helper method to start with a deterministic deck
+-}
+initWithDeck : Deck.Deck -> ( Model, Cmd Msg )
+initWithDeck deck =
+    ( { initalState | deck = deck, state = Betting }, Cmd.none )
+
+
 init : ( Model, Cmd Msg )
 init =
-    ( { deck = []
-      , dealer = []
-      , players =
-            Dict.fromList
-                [ ( 0
-                  , { type_ = AI
-                    , money = 5
-                    , hands = Dict.empty
-                    , selectedHand = 0
-                    }
-                  )
-                ]
-      , currentPlayer = 0
-      , state = ShuffleCards
-      }
-    , shuffleDeck (Deck.decks 4)
-    )
+    ( initalState, shuffleDeck (Deck.decks 4) )
 
 
 shuffleDeck : Deck.Deck -> Cmd Msg

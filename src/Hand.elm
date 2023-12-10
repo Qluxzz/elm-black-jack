@@ -1,4 +1,4 @@
-module Hand exposing (..)
+module Hand exposing (Hand, comp, toString, value)
 
 import Card
 
@@ -7,6 +7,8 @@ type alias Hand =
     List Card.Card
 
 
+{-| Get the value of a hand. A tuple is returned since Ace's is worth 1/11. The first item of the tuple is counting the Ace as 1, the other as 11
+-}
 value : Hand -> ( Int, Int )
 value cards =
     List.foldl

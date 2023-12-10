@@ -1,4 +1,4 @@
-module Card exposing (..)
+module Card exposing (Card, CardValue(..), Suit(..), Value(..), suiteToCssClass, toString, value, valueToCssClass)
 
 
 type Suit
