@@ -1,6 +1,6 @@
 module Hand exposing (..)
 
-import Card as Card
+import Card
 
 
 type alias Hand =
@@ -44,3 +44,8 @@ comp a b =
             largestValidHandValue b
     in
     Basics.compare aValue bValue
+
+
+toString : Hand -> String
+toString hand =
+    hand |> List.map Card.toString |> String.join ","
