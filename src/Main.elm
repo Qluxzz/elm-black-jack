@@ -548,7 +548,7 @@ updatePlayer_ players index new =
 canSplit : Hand.Hand -> Bool
 canSplit hand =
     case hand of
-        first :: second :: _ ->
+        [ first, second ] ->
             first.value == second.value
 
         _ ->
