@@ -124,18 +124,21 @@ body>div {
     bottom: 0;
 }
 
-.color::before {
+.color::before,
+.color::after {
     position: absolute;
     font-size: 32px;
-    left: -3px;
+    width: 32px;
+    text-align: center;
+}
+
+.color::before {
+    left: 0;
     top: 32px;
 }
 
 .color::after {
-    position: absolute;
-    font-size: 32px;
-    width: 26px;
-    right: 5px;
+    right: 0px;
     bottom: 32px;
     transform: scale(1, -1);
 }
@@ -172,7 +175,7 @@ body>div {
 .value {
     position: absolute;
     top: 0;
-    left: 0;
+    left: 0px;
     right: 0;
     bottom: 0;
 }
@@ -181,15 +184,17 @@ body>div {
 .value::after {
     font-size: 32px;
     position: absolute;
+    width: 32px;
+    text-align: center;
 }
 
 .value::before {
-    left: 5px;
+    left: 0px;
     top: 5px;
 }
 
 .value::after {
-    right: 5px;
+    right: 0px;
     bottom: 5px;
     transform: scale(1, -1);
 }
