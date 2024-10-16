@@ -3,7 +3,6 @@ module Main exposing (main)
 import Browser
 import Card exposing (Card, Suit(..), Value(..))
 import Deck
-import Dict exposing (Dict)
 import Hand
 import Html
 import Html.Attributes
@@ -29,14 +28,6 @@ import Task
 
    If the dealer busts, all players not busted win.
 -}
-
-
-type alias PlayerId =
-    Int
-
-
-type alias HandId =
-    Int
 
 
 type alias Dollars =
@@ -67,8 +58,7 @@ type alias Model =
     { state : GameState
     , deck : Deck.Deck
     , dealer : Dealer
-    , players : Dict PlayerId Player
-    , currentPlayer : PlayerId
+    , players : ( Player, List Player )
     }
 
 
@@ -86,10 +76,9 @@ type alias Hand =
 
 
 type alias Player =
-    { hands : Dict HandId Hand
+    { hands : ( Hand, List Hand )
     , money : Int
     , type_ : PlayerType
-    , selectedHand : HandId
     }
 
 
@@ -111,16 +100,12 @@ initalState =
     { deck = []
     , dealer = []
     , players =
-        Dict.fromList
-            [ ( 0
-              , { type_ = AI
-                , money = 5
-                , hands = Dict.empty
-                , selectedHand = 0
-                }
-              )
-            ]
-    , currentPlayer = 0
+        ( { type_ = AI
+          , money = 5
+          , hands = ( { cards = [], bet = 0, state = Playing }, [] )
+          }
+        , []
+        )
     , state = ShuffleCards
     }
 
@@ -155,18 +140,14 @@ main =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
-        updatePlayer =
-            updatePlayer_ model.players model.currentPlayer
+        currentPlayer =
+            Tuple.first model.players
 
-        allHandsHaveCond players cond =
-            players
-                |> Dict.values
-                |> List.all
-                    (\p ->
-                        p.hands
-                            |> Dict.values
-                            |> List.all (\h -> cond h)
-                    )
+        players =
+            Tuple.second model.players
+
+        allHandsHaveCond player cond =
+            allHands player.hands |> List.all (\h -> cond h)
     in
     case msg of
         ShuffleDeck ->
@@ -178,11 +159,11 @@ update msg model =
         {- Betting -}
         Bet amount ->
             let
-                updatedPlayers =
-                    updatePlayer (\p -> { p | hands = Dict.fromList [ ( 0, { bet = amount, cards = [], state = Playing } ) ], money = p.money - amount })
+                updatedPlayer =
+                    { currentPlayer | money = currentPlayer.money - amount, hands = updateCurrentHand currentPlayer.hands (\h -> { h | bet = amount }) }
 
                 allHandsHaveBet =
-                    allHandsHaveCond updatedPlayers (\h -> h.bet /= 0)
+                    allHandsHaveCond updatedPlayer (\h -> h.bet /= 0)
             in
             ( { model
                 | state =
@@ -191,13 +172,12 @@ update msg model =
 
                     else
                         model.state
-                , players = updatedPlayers
-                , currentPlayer =
+                , players =
                     if allHandsHaveBet then
-                        0
+                        continueToNextPlayer updatedPlayer players
 
                     else
-                        model.currentPlayer + 1
+                        ( updatedPlayer, players )
               }
             , if allHandsHaveBet then
                 Process.sleep 100 |> Task.perform (\_ -> Deal)
@@ -212,39 +192,34 @@ update msg model =
                 ( cards, deck ) =
                     Deck.takeCard model.deck
 
-                updatedPlayers =
-                    updatePlayer
-                        (\p ->
-                            { p
-                                | hands = updateHand p.hands p.selectedHand (\h -> { h | cards = h.cards ++ cards })
-                            }
-                        )
+                updatedPlayer =
+                    { currentPlayer | hands = updateCurrentHand currentPlayer.hands (\h -> { h | cards = h.cards ++ cards }) }
 
                 currentHandHasTwoCards =
-                    Dict.get model.currentPlayer updatedPlayers
-                        |> Maybe.andThen (\p -> Dict.get p.selectedHand p.hands |> Maybe.map (\h -> List.length h.cards == 2))
-                        |> Maybe.withDefault False
+                    currentPlayer.hands
+                        |> Tuple.first
+                        |> (\selectedHand ->
+                                List.length selectedHand.cards == 2
+                           )
 
                 allHandsHaveOneCard =
-                    allHandsHaveCond updatedPlayers (\h -> List.length h.cards == 1)
+                    allHandsHaveCond updatedPlayer (\h -> List.length h.cards == 1)
                         |> Debug.log "All players have one cards"
 
                 allHandsHaveTwoCards =
-                    allHandsHaveCond updatedPlayers (\h -> List.length h.cards == 2)
+                    allHandsHaveCond updatedPlayer (\h -> List.length h.cards == 2)
                         |> Debug.log "All players have two cards"
+
+                updatedPlayers =
+                    if allHandsHaveTwoCards || currentHandHasTwoCards then
+                        continueToNextPlayer updatedPlayer players
+
+                    else
+                        ( updatedPlayer, players )
             in
             ( { model
                 | deck = deck
                 , players = updatedPlayers
-                , currentPlayer =
-                    if allHandsHaveTwoCards then
-                        0
-
-                    else if currentHandHasTwoCards then
-                        model.currentPlayer + 1
-
-                    else
-                        model.currentPlayer
                 , state =
                     if allHandsHaveTwoCards then
                         HitOrStand
@@ -280,29 +255,25 @@ update msg model =
                 ( cards, deck ) =
                     Deck.takeCard model.deck
 
-                updatedPlayers =
-                    updatePlayer
-                        (\p ->
-                            { p
-                                | hands =
-                                    updateHand p.hands
-                                        p.selectedHand
-                                        (\h ->
-                                            { h
-                                                | cards = h.cards ++ cards
-                                                , state =
-                                                    if Tuple.first (Hand.value (h.cards ++ cards)) > 21 then
-                                                        Busted
+                updatedPlayer =
+                    { currentPlayer
+                        | hands =
+                            updateCurrentHand currentPlayer.hands
+                                (\h ->
+                                    { h
+                                        | cards = h.cards ++ cards
+                                        , state =
+                                            if Tuple.first (Hand.value (h.cards ++ cards)) > 21 then
+                                                Busted
 
-                                                    else
-                                                        Playing
-                                            }
-                                        )
-                            }
-                        )
+                                            else
+                                                Playing
+                                    }
+                                )
+                    }
 
                 allPlayersStandingOrBusted =
-                    allHandsHaveCond updatedPlayers (\h -> List.member h.state [ Standing, Busted ])
+                    allHandsHaveCond updatedPlayer (\h -> List.member h.state [ Standing, Busted ])
                         |> Debug.log "All players standing or busted"
 
                 dealerHandValue =
@@ -316,7 +287,7 @@ update msg model =
             in
             ( { model
                 | deck = deck
-                , players = updatedPlayers
+                , players = ( updatedPlayer, Tuple.second model.players )
                 , state =
                     if allPlayersStandingOrBusted && xor dealerHasReachedLimit dealerHasBust then
                         Result
@@ -335,25 +306,13 @@ update msg model =
         -- Stand on which hand?
         Stand ->
             let
-                updatedPlayers =
-                    updatePlayer
-                        (\p ->
-                            let
-                                nextHand =
-                                    if p.selectedHand + 1 == Dict.size p.hands then
-                                        0
-
-                                    else
-                                        p.selectedHand + 1
-                            in
-                            { p
-                                | hands = updateHand p.hands p.selectedHand (\h -> { h | state = Standing })
-                                , selectedHand = nextHand
-                            }
-                        )
+                updatedPlayer =
+                    { currentPlayer
+                        | hands = updateCurrentHand currentPlayer.hands (\h -> { h | state = Standing })
+                    }
 
                 allPlayersStandingOrBusted =
-                    allHandsHaveCond updatedPlayers (\h -> List.member h.state [ Standing, Busted ])
+                    allHandsHaveCond updatedPlayer (\h -> List.member h.state [ Standing, Busted ])
                         |> Debug.log "All players standing or busted"
 
                 dealerHandValue =
@@ -373,7 +332,7 @@ update msg model =
                         model.state
             in
             ( { model
-                | players = updatedPlayers
+                | players = ( updatedPlayer, Tuple.second model.players )
                 , state = newState
               }
             , if not dealerHasReachedLimit then
@@ -390,49 +349,32 @@ update msg model =
         -- Double bet and take another card
         DoubleDown ->
             let
-                currentPlayer =
-                    Dict.get model.currentPlayer model.players
-
                 currentBet =
-                    currentPlayer
-                        |> Maybe.andThen (\p -> Dict.get p.selectedHand p.hands |> Maybe.map (\h -> h.bet))
+                    Tuple.first currentPlayer.hands |> .bet
 
                 ( cards, deck ) =
                     Deck.takeCard model.deck
 
-                updatedPlayers =
-                    updatePlayer
-                        (\p ->
-                            let
-                                nextHand =
-                                    if p.selectedHand + 1 == Dict.size p.hands then
-                                        0
-
-                                    else
-                                        p.selectedHand + 1
-                            in
-                            { p
-                                | hands =
-                                    updateHand p.hands
-                                        p.selectedHand
-                                        (\h ->
-                                            { h
-                                                | state = Standing
-                                                , bet = h.bet * 2
-                                                , cards = h.cards ++ cards
-                                            }
-                                        )
-                                , money = p.money - (Maybe.map (\b -> b * 2) currentBet |> Maybe.withDefault 0)
-                                , selectedHand = nextHand
-                            }
-                        )
+                updatedPlayer =
+                    { currentPlayer
+                        | hands =
+                            updateCurrentHand currentPlayer.hands
+                                (\h ->
+                                    { h
+                                        | state = Standing
+                                        , bet = h.bet * 2
+                                        , cards = h.cards ++ cards
+                                    }
+                                )
+                        , money = currentPlayer.money - (currentBet * 2)
+                    }
             in
-            ( { model | players = updatedPlayers, deck = deck }, Cmd.none )
+            ( { model | players = ( updatedPlayer, Tuple.second model.players ), deck = deck }, Cmd.none )
 
         NextRound ->
             let
                 cleared =
-                    Dict.map (\_ -> \p -> { p | hands = Dict.empty }) model.players
+                    ( clearHands currentPlayer, List.map clearHands (Tuple.second model.players) )
 
                 newState =
                     initalState
@@ -444,7 +386,7 @@ view : Model -> Html.Html Msg
 view model =
     Html.div []
         ((dealerView model.dealer model.state
-            :: List.map (playerView model.state) (Dict.values model.players)
+            :: List.map (playerView model.state) (allPlayers model.players)
          )
             ++ (if model.state == Result then
                     [ Html.div [ Html.Attributes.class "result" ]
@@ -508,7 +450,7 @@ playerView state player =
             Html.div []
                 (List.map
                     (handView player.money)
-                    (Dict.values player.hands)
+                    (allHands player.hands)
                 )
 
           else
@@ -568,28 +510,27 @@ handView money { cards, bet, state } =
 -- HELPER FUNCTIONS
 
 
-updateHand :
-    Dict HandId Hand
-    -> HandId
+allPlayers : ( Player, List Player ) -> List Player
+allPlayers ( currentPlayer, rest ) =
+    currentPlayer :: rest
+
+
+allHands : ( Hand, List Hand ) -> List Hand
+allHands ( currentHand, rest ) =
+    currentHand :: rest
+
+
+updateCurrentHand :
+    ( Hand, List Hand )
     -> (Hand -> Hand)
-    -> Dict HandId Hand
-updateHand hands index new =
-    Dict.update
-        index
-        (Maybe.map new)
-        hands
+    -> ( Hand, List Hand )
+updateCurrentHand ( currentHand, rest ) new =
+    ( new currentHand, rest )
 
 
-updatePlayer_ :
-    Dict PlayerId Player
-    -> PlayerId
-    -> (Player -> Player)
-    -> Dict PlayerId Player
-updatePlayer_ players index new =
-    Dict.update
-        index
-        (Maybe.map new)
-        players
+clearHands : Player -> Player
+clearHands player =
+    { player | hands = ( { cards = [], bet = 0, state = Playing }, [] ) }
 
 
 canSplit : Hand.Hand -> Bool
@@ -600,3 +541,30 @@ canSplit hand =
 
         _ ->
             False
+
+
+continueToNextPlayer : Player -> List Player -> ( Player, List Player )
+continueToNextPlayer currentPlayer rest =
+    case rest of
+        x :: xs ->
+            ( x, xs ++ [ currentPlayer ] )
+
+        _ ->
+            ( currentPlayer, rest )
+
+
+continueToNextHand : Player -> Player
+continueToNextHand player =
+    let
+        ( currentHand, rest ) =
+            player.hands
+    in
+    { player
+        | hands =
+            case rest of
+                x :: xs ->
+                    ( x, xs ++ [ currentHand ] )
+
+                _ ->
+                    ( currentHand, rest )
+    }
