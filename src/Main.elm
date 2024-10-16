@@ -56,6 +56,7 @@ type Msg
     | Stand
     | Split
     | DoubleDown
+    | NextRound
 
 
 type alias Dealer =
@@ -303,18 +304,31 @@ update msg model =
                 allPlayersStandingOrBusted =
                     allHandsHaveCond updatedPlayers (\h -> List.member h.state [ Standing, Busted ])
                         |> Debug.log "All players standing or busted"
+
+                dealerHandValue =
+                    Hand.value model.dealer
+
+                dealerHasReachedLimit =
+                    Tuple.first dealerHandValue >= 17
+
+                dealerHasBust =
+                    Tuple.first dealerHandValue > 21
             in
             ( { model
                 | deck = deck
                 , players = updatedPlayers
                 , state =
-                    if allPlayersStandingOrBusted then
+                    if allPlayersStandingOrBusted && xor dealerHasReachedLimit dealerHasBust then
                         Result
 
                     else
                         model.state
               }
-            , Cmd.none
+            , if dealerHasReachedLimit then
+                Process.sleep 1000 |> Task.perform (\_ -> DealerTakesCard)
+
+              else
+                Cmd.none
             )
 
         -- Continue to next player
@@ -342,8 +356,17 @@ update msg model =
                     allHandsHaveCond updatedPlayers (\h -> List.member h.state [ Standing, Busted ])
                         |> Debug.log "All players standing or busted"
 
+                dealerHandValue =
+                    Hand.value model.dealer
+
+                dealerHasReachedLimit =
+                    Tuple.first dealerHandValue >= 17
+
+                dealerHasBust =
+                    Tuple.first dealerHandValue > 21
+
                 newState =
-                    if allPlayersStandingOrBusted then
+                    if allPlayersStandingOrBusted && xor dealerHasReachedLimit dealerHasBust then
                         Result
 
                     else
@@ -353,7 +376,11 @@ update msg model =
                 | players = updatedPlayers
                 , state = newState
               }
-            , Cmd.none
+            , if not dealerHasReachedLimit then
+                Process.sleep 1000 |> Task.perform (\_ -> DealerTakesCard)
+
+              else
+                Cmd.none
             )
 
         -- Split current player hands into two, allow player to take a card/stand/split/doubledown on each hand
@@ -402,12 +429,32 @@ update msg model =
             in
             ( { model | players = updatedPlayers, deck = deck }, Cmd.none )
 
+        NextRound ->
+            let
+                cleared =
+                    Dict.map (\_ -> \p -> { p | hands = Dict.empty }) model.players
+
+                newState =
+                    initalState
+            in
+            ( { newState | state = Betting, deck = model.deck, players = cleared }, Cmd.none )
+
 
 view : Model -> Html.Html Msg
 view model =
     Html.div []
-        (dealerView model.dealer model.state
+        ((dealerView model.dealer model.state
             :: List.map (playerView model.state) (Dict.values model.players)
+         )
+            ++ (if model.state == Result then
+                    [ Html.div [ Html.Attributes.class "result" ]
+                        [ Html.button [ Html.Events.onClick NextRound ] [ Html.text "Continue?" ]
+                        ]
+                    ]
+
+                else
+                    [ Html.text "Game ongoing" ]
+               )
         )
 
 
@@ -421,7 +468,7 @@ cardView hidden card =
 
 dealerView : Dealer -> GameState -> Html.Html Msg
 dealerView dealer state =
-    if state == Result then
+    if state == Result || List.length dealer > 2 then
         Html.div []
             [ Html.div [ Html.Attributes.class "cards" ] (List.map (cardView False) dealer)
             , Html.p [] [ Html.text (handValue dealer) ]
