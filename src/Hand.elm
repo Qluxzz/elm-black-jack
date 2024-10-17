@@ -1,4 +1,4 @@
-module Hand exposing (Hand, comp, toString, value)
+module Hand exposing (Hand, comp, largestValue, toString, value)
 
 import Card
 
@@ -7,7 +7,7 @@ type alias Hand =
     List Card.Card
 
 
-{-| Get the value of a hand. A tuple is returned since Ace's is worth 1/11. The first item of the tuple is counting the Ace as 1, the other as 11
+{-| Get the value of a hand. A tuple is returned since Aces are worth 1/11. The first item of the tuple is counting the Ace as 1, the other as 11
 -}
 value : Hand -> ( Int, Int )
 value cards =
@@ -25,8 +25,8 @@ value cards =
         cards
 
 
-largestValidHandValue : Hand -> Int
-largestValidHandValue hand =
+largestValue : Hand -> Int
+largestValue hand =
     case value hand of
         ( v1, v2 ) ->
             if v2 > 21 then
@@ -38,14 +38,7 @@ largestValidHandValue hand =
 
 comp : Hand -> Hand -> Order
 comp a b =
-    let
-        aValue =
-            largestValidHandValue a
-
-        bValue =
-            largestValidHandValue b
-    in
-    Basics.compare aValue bValue
+    Basics.compare (largestValue a) (largestValue b)
 
 
 toString : Hand -> String

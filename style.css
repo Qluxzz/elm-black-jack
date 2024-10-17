@@ -63,22 +63,62 @@ h6 {
     --black-suite: black;
 }
 
-.cards {
+
+body>div {
+    flex-grow: 1;
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+}
+
+.actions {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    justify-content: center;
+    display: flex;
+    gap: 10px;
+}
+
+.hands {
+    display: flex;
+    gap: 20px;
+}
+
+.hand {
+    padding: 10px;
+
+    &.active {
+        background-color: rgba(0, 0, 0, 0.3);
+        border-radius: 10px;
+    }
+
+    &.busted {
+        opacity: 0.2;
+    }
+}
+
+.result {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0px;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
     justify-content: center;
 }
 
-.hidden:after {
-    content: "";
-    display: block;
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    background-color: snow;
-    border: 1px solid #ccc;
-    border-radius: 10px;
+
+
+/* CARDS */
+
+.cards {
+    display: flex;
+    justify-content: center;
 }
 
 .card:not(:first-child) {
@@ -93,22 +133,6 @@ h6 {
     transform: translateY(-2px);
 }
 
-body>div {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-around;
-}
-
-.result {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0px;
-    background-color: rgba(0, 0, 0, 0.5);
-}
 
 .card {
     aspect-ratio: 2.25 / 3.5;
@@ -121,6 +145,19 @@ body>div {
     box-shadow: 0 0 10px #333;
     color: black;
     font-variant-numeric: tabular-nums;
+
+    &.hidden:after {
+        content: "";
+        display: block;
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        background-color: snow;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+    }
 }
 
 /* SUITES */
