@@ -146,8 +146,8 @@ update msg model =
         players =
             Tuple.second model.players
 
-        allHandsHaveCond player cond =
-            allHands player.hands |> List.all (\h -> cond h)
+        allPlayersHaveCond p cond =
+            p |> allHands |> List.all (\h -> cond h)
     in
     case msg of
         ShuffleDeck ->
@@ -202,20 +202,18 @@ update msg model =
                                 List.length selectedHand.cards == 2
                            )
 
-                allHandsHaveOneCard =
-                    allHandsHaveCond updatedPlayer (\h -> List.length h.cards == 1)
-                        |> Debug.log "All players have one cards"
-
-                allHandsHaveTwoCards =
-                    allHandsHaveCond updatedPlayer (\h -> List.length h.cards == 2)
-                        |> Debug.log "All players have two cards"
-
                 updatedPlayers =
-                    if allHandsHaveTwoCards || currentHandHasTwoCards then
+                    if currentHandHasTwoCards then
                         continueToNextPlayer updatedPlayer players
 
                     else
                         ( updatedPlayer, players )
+
+                allPlayersHaveOneCard =
+                    allPlayersHaveCond (allPlayers updatedPlayers) (\h -> List.length h.cards == 1)
+
+                allHandsHaveTwoCards =
+                    allPlayersHaveCond (allPlayers updatedPlayers) (\h -> List.length h.cards == 2)
             in
             ( { model
                 | deck = deck
@@ -227,7 +225,7 @@ update msg model =
                     else
                         model.state
               }
-            , if allHandsHaveOneCard then
+            , if allPlayersHaveOneCard then
                 Cmd.batch
                     [ Process.sleep 1000 |> Task.perform (\_ -> DealerTakesCard)
                     , Process.sleep 1000 |> Task.perform (\_ -> Deal)
@@ -272,8 +270,11 @@ update msg model =
                                 )
                     }
 
+                updatedPlayers =
+                    ( updatedPlayer, players )
+
                 allPlayersStandingOrBusted =
-                    allHandsHaveCond updatedPlayer (\h -> List.member h.state [ Standing, Busted ])
+                    allPlayersHaveCond (allPlayers updatedPlayers) (\h -> List.member h.state [ Standing, Busted ])
                         |> Debug.log "All players standing or busted"
 
                 dealerHandValue =
@@ -287,7 +288,7 @@ update msg model =
             in
             ( { model
                 | deck = deck
-                , players = ( updatedPlayer, Tuple.second model.players )
+                , players = updatedPlayers
                 , state =
                     if allPlayersStandingOrBusted && xor dealerHasReachedLimit dealerHasBust then
                         Result
@@ -311,8 +312,11 @@ update msg model =
                         | hands = updateCurrentHand currentPlayer.hands (\h -> { h | state = Standing })
                     }
 
+                updatedPlayers =
+                    ( updatedPlayer, players )
+
                 allPlayersStandingOrBusted =
-                    allHandsHaveCond updatedPlayer (\h -> List.member h.state [ Standing, Busted ])
+                    allPlayersHaveCond (allPlayers updatedPlayers) (\h -> List.member h.state [ Standing, Busted ])
                         |> Debug.log "All players standing or busted"
 
                 dealerHandValue =
@@ -344,7 +348,26 @@ update msg model =
 
         -- Split current player hands into two, allow player to take a card/stand/split/doubledown on each hand
         Split ->
-            ( model, Cmd.none )
+            let
+                ( currentHand, rest ) =
+                    currentPlayer.hands
+
+                newHands : ( Hand, List Hand )
+                newHands =
+                    case currentHand.cards of
+                        [ first, second ] ->
+                            ( { cards = [ first ], bet = currentHand.bet, state = Playing }, { cards = [ second ], bet = currentHand.bet, state = Playing } :: rest )
+
+                        _ ->
+                            ( currentHand, rest )
+
+                updatedPlayer =
+                    { currentPlayer
+                        | money = currentPlayer.money - currentHand.bet
+                        , hands = newHands
+                    }
+            in
+            ( { model | players = ( updatedPlayer, players ) }, Cmd.none )
 
         -- Double bet and take another card
         DoubleDown ->
@@ -450,7 +473,7 @@ playerView state player =
             Html.div []
                 (List.map
                     (handView player.money)
-                    (allHands player.hands)
+                    (playerHands player.hands)
                 )
 
           else
@@ -515,8 +538,24 @@ allPlayers ( currentPlayer, rest ) =
     currentPlayer :: rest
 
 
-allHands : ( Hand, List Hand ) -> List Hand
-allHands ( currentHand, rest ) =
+allHands : List Player -> List Hand
+allHands players =
+    players
+        |> List.map (\p -> playerHands p.hands)
+        |> List.concat
+
+
+allHandsHaveCond : Player -> (Hand -> Bool) -> Bool
+allHandsHaveCond player cond =
+    let
+        ( currentHand, rest ) =
+            player.hands
+    in
+    cond currentHand || List.all cond rest
+
+
+playerHands : ( Hand, List Hand ) -> List Hand
+playerHands ( currentHand, rest ) =
     currentHand :: rest
 
 
