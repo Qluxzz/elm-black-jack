@@ -36,8 +36,7 @@ type alias Dollars =
 
 
 type Msg
-    = ShuffleDeck
-    | ShuffledDeck Deck.Deck
+    = ShuffledDeck Deck.Deck
       -- Betting
     | Bet Dollars
       -- Deal
@@ -53,7 +52,6 @@ type Msg
     | DealerFinish
     | Winnings
       -- Toast
-    | ShowToast String
     | ClearToast
 
 
@@ -166,9 +164,6 @@ update msg model =
             p |> allPlayers |> allHands |> List.all (\h -> cond h)
     in
     case msg of
-        ShuffleDeck ->
-            ( model, Cmd.none )
-
         ShuffledDeck deck ->
             ( { model | deck = deck, state = Betting }, Cmd.none )
 
@@ -500,19 +495,16 @@ update msg model =
 
                 dealerHasBust =
                     lowestDealerHandValue > 21
-
-                updatedModel =
-                    if dealerHasReachedLimit || dealerHasBust then
-                        ( { model | state = Result }, Process.sleep 0 |> Task.perform (\_ -> Winnings) )
-
-                    else
-                        let
-                            ( cards, deck ) =
-                                Deck.takeCard model.deck
-                        in
-                        ( { model | dealer = model.dealer ++ cards, deck = deck }, Process.sleep 1000 |> Task.perform (\_ -> DealerFinish) )
             in
-            updatedModel
+            if dealerHasReachedLimit || dealerHasBust then
+                ( { model | state = Result }, Process.sleep 0 |> Task.perform (\_ -> Winnings) )
+
+            else
+                let
+                    ( cards, deck ) =
+                        Deck.takeCard model.deck
+                in
+                ( { model | dealer = model.dealer ++ cards, deck = deck }, Process.sleep 1000 |> Task.perform (\_ -> DealerFinish) )
 
         -- Dealer has busted or reached 17 now
         Winnings ->
@@ -524,9 +516,6 @@ update msg model =
                 win =
                     calculateWinnings dealerHandValue currentPlayer
 
-                totalBet =
-                    currentPlayer.hands |> playerHands |> List.map .bet |> List.sum
-
                 updatedPlayers =
                     ( { currentPlayer | money = currentPlayer.money + calculateWinnings dealerHandValue currentPlayer }
                     , List.map (\p -> { p | money = p.money + calculateWinnings dealerHandValue p }) players
@@ -535,7 +524,7 @@ update msg model =
             ( { model | players = updatedPlayers }, Cmd.none )
                 |> toast
                     (if win == 0 then
-                        "You lost $" ++ String.fromInt totalBet ++ "!"
+                        "You lost $" ++ String.fromInt (currentPlayer.hands |> playerHands |> List.map .bet |> List.sum) ++ "!"
 
                      else
                         "You won $" ++ String.fromInt win ++ "!"
@@ -550,9 +539,6 @@ update msg model =
                     initalState
             in
             ( { newState | state = Betting, deck = model.deck, players = cleared }, Cmd.none )
-
-        ShowToast message ->
-            ( { model | toast = Just message }, clearAlert )
 
         ClearToast ->
             ( { model | toast = Nothing }, Cmd.none )
@@ -751,10 +737,8 @@ allPlayers ( currentPlayer, rest ) =
 
 
 allHands : List Player -> List Hand
-allHands players =
-    players
-        |> List.map (\p -> playerHands p.hands)
-        |> List.concat
+allHands =
+    List.concatMap (.hands >> playerHands)
 
 
 allHandsHaveCond : Player -> (Hand -> Bool) -> Bool

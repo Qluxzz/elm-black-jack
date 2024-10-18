@@ -1,9 +1,9 @@
-module DeckTests exposing (..)
+module DeckTests exposing (suite)
 
 import Card
 import Deck
 import Expect
-import Test exposing (..)
+import Test exposing (Test, describe, test)
 
 
 suite : Test

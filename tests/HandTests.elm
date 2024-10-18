@@ -1,9 +1,9 @@
-module HandTests exposing (..)
+module HandTests exposing (suite)
 
 import Card
 import Expect
 import Hand
-import Test exposing (..)
+import Test exposing (Test, describe, test)
 
 
 cases : List ( ( Hand.Hand, Hand.Hand ), Order )

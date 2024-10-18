@@ -1,4 +1,4 @@
-module Hand exposing (Hand, comp, largestValue, toString, value)
+module Hand exposing (Hand, comp, largestValue, toString)
 
 import Card
 
@@ -27,13 +27,15 @@ value cards =
 
 largestValue : Hand -> Int
 largestValue hand =
-    case value hand of
-        ( v1, v2 ) ->
-            if v2 > 21 then
-                v1
+    let
+        ( v1, v2 ) =
+            value hand
+    in
+    if v2 > 21 then
+        v1
 
-            else
-                v2
+    else
+        v2
 
 
 comp : Hand -> Hand -> Order
