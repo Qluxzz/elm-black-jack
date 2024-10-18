@@ -531,7 +531,7 @@ playerView player =
             |> List.sortBy .order
             |> List.map
                 (\hand ->
-                    if hand == activeHand then
+                    if hand.order == activeHand.order then
                         activeHandView hand
 
                     else
