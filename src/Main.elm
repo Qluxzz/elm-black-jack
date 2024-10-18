@@ -493,7 +493,6 @@ dealerView dealer state =
     if List.member state [ DealerFinishes, Result ] then
         Html.div []
             [ Html.div [ Html.Attributes.class "cards" ] (List.map (cardView False) dealer)
-            , Html.p [] [ Html.text (handValue dealer) ]
             ]
 
     else
@@ -503,7 +502,6 @@ dealerView dealer state =
                     [ Html.div [ Html.Attributes.class "cards" ]
                         [ cardView False first
                         ]
-                    , Html.p [] [ Html.text (handValue [ first ]) ]
                     ]
 
             first :: second :: rest ->
@@ -514,7 +512,6 @@ dealerView dealer state =
                          ]
                             ++ List.map (cardView False) rest
                         )
-                    , Html.p [] [ Html.text (handValue [ first ]) ]
                     ]
 
             [] ->
@@ -541,19 +538,6 @@ playerView player =
         )
 
 
-handValue : Hand.Hand -> String
-handValue hand =
-    hand
-        |> Hand.value
-        |> (\( v1, v2 ) ->
-                if v1 == v2 || v2 > 21 then
-                    String.fromInt v1
-
-                else
-                    String.fromInt v1 ++ "/" ++ String.fromInt v2
-           )
-
-
 inactiveHandView : Hand -> Html.Html msg
 inactiveHandView =
     handView []
@@ -571,8 +555,7 @@ handView attributes { cards, state, bet } =
             [ Html.div [ Html.Attributes.class "cards" ]
                 (List.map (cardView False) cards)
             , Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "justify-content" "space-between" ]
-                [ Html.p [] [ Html.text (handValue cards) ]
-                , Html.p [] [ Html.text ("$" ++ String.fromInt bet) ]
+                [ Html.p [] [ Html.text ("$" ++ String.fromInt bet) ]
                 ]
             ]
         ]
