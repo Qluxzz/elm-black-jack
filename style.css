@@ -257,7 +257,7 @@ body>div {
 
 
 .spades::before,
-.spaces::after {
+.spades::after {
     content: '♠';
     color: var(--black-suite);
 }
