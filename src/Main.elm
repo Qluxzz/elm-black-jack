@@ -816,36 +816,32 @@ continueToNextHand ( currentHand, rest ) =
 
 calculateWinnings : Int -> Player -> Int
 calculateWinnings dealerHand { hands } =
-    let
-        winnings =
-            List.foldr
-                (\{ cards, bet, state } acc ->
-                    if state == Busted then
-                        -- You busted, no win
-                        acc
+    List.foldr
+        (\{ cards, bet, state } acc ->
+            if state == Busted then
+                -- You busted, no win
+                acc
 
-                    else if dealerHand > 21 then
-                        -- Dealer busted, automatic win
+            else if dealerHand > 21 then
+                -- Dealer busted, automatic win
+                acc + bet * 2
+
+            else
+                case Basics.compare (Hand.largestValue cards) dealerHand of
+                    GT ->
+                        -- You won over the dealer, you get 2x your bet back
                         acc + bet * 2
 
-                    else
-                        case Basics.compare (Hand.largestValue cards) dealerHand of
-                            GT ->
-                                -- You won over the dealer, you get 2x your bet back
-                                bet * 2
+                    EQ ->
+                        -- Push, you get your inital bet back
+                        acc + bet
 
-                            EQ ->
-                                -- Push, you get your inital bet back
-                                bet
-
-                            LT ->
-                                -- You lost to the dealer
-                                0
-                )
-                0
-                (playerHands hands)
-    in
-    winnings
+                    LT ->
+                        -- You lost to the dealer
+                        acc
+        )
+        0
+        (playerHands hands)
 
 
 clearAlert : Cmd Msg
