@@ -482,9 +482,11 @@ view model =
 
 cardView : Bool -> Card -> Html.Html msg
 cardView hidden card =
-    Html.div [ Html.Attributes.class "card", Html.Attributes.classList [ ( "hidden", hidden ) ] ]
-        [ Html.div [ Html.Attributes.class "color", Html.Attributes.class (Card.suiteToCssClass card) ] []
-        , Html.div [ Html.Attributes.class "value", Html.Attributes.class (Card.valueToCssClass card) ] []
+    Html.div [ Html.Attributes.class "card" ]
+        [ Html.div [ Html.Attributes.class "card-inner", Html.Attributes.classList [ ( "hidden", hidden ) ] ]
+            [ Html.div [ Html.Attributes.class "color", Html.Attributes.class (Card.suiteToCssClass card) ] []
+            , Html.div [ Html.Attributes.class "value", Html.Attributes.class (Card.valueToCssClass card) ] []
+            ]
         ]
 
 
