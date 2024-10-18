@@ -112,6 +112,46 @@ body>div {
     justify-content: center;
 }
 
+.toast {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+
+    .message {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 32px;
+        font-weight: bold;
+        width: 50%;
+        height: 150px;
+        background-color: white;
+        color: black;
+        border-radius: 10px;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+        animation: toast 250ms ease-in-out;
+    }
+}
+
+@keyframes toast {
+    from {
+        filter: opacity(0);
+        transform: scale(0.1);
+    }
+
+    to {
+        filter: opacity(1);
+        transform: scale(1);
+    }
+
+}
+
 
 
 /* CARDS */

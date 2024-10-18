@@ -7,6 +7,7 @@ import Hand
 import Html
 import Html.Attributes
 import Html.Events
+import Platform.Cmd as Cmd
 import Process
 import Random
 import Random.List
@@ -24,7 +25,7 @@ import Task
    Each player is given the choice to take another card or stand,
    When all players are standing or busted, the dealer flips the hidden card.
 
-   If the dealers total sum is below the table minimum (often 16), the dealer takes cards until he reaches 16 or is bust.
+   If the dealers total sum is below the table minimum (often 17), the dealer takes cards until he reaches 17 or is bust.
 
    If the dealer busts, all players not busted win.
 -}
@@ -51,6 +52,9 @@ type Msg
       -- All players are now standing or have busted
     | DealerFinish
     | Winnings
+      -- Toast
+    | ShowToast String
+    | ClearToast
 
 
 type alias Dealer =
@@ -62,6 +66,7 @@ type alias Model =
     , deck : Deck.Deck
     , dealer : Dealer
     , players : ( Player, List Player )
+    , toast : Maybe String
     }
 
 
@@ -114,6 +119,7 @@ initalState =
         , []
         )
     , state = ShuffleCards
+    , toast = Nothing
     }
 
 
@@ -202,8 +208,37 @@ update msg model =
                 ( cards, deck ) =
                     Deck.takeCard model.deck
 
+                ( currentHand, rest ) =
+                    currentPlayer.hands
+
+                updatedCards =
+                    currentHand.cards ++ cards
+
+                state =
+                    case Basics.compare (Hand.largestValue updatedCards) 21 of
+                        GT ->
+                            Busted
+
+                        EQ ->
+                            Standing
+
+                        LT ->
+                            Playing
+
+                updatedCurrentHand =
+                    { currentHand | cards = updatedCards, state = state }
+
                 updatedPlayer =
-                    { currentPlayer | hands = updateCurrentHand currentPlayer.hands (\h -> { h | cards = h.cards ++ cards }) }
+                    { currentPlayer
+                        | hands =
+                            (if state == Busted then
+                                continueToNextHand
+
+                             else
+                                identity
+                            )
+                                ( updatedCurrentHand, rest )
+                    }
 
                 currentHandHasTwoCards =
                     currentPlayer.hands
@@ -224,6 +259,9 @@ update msg model =
 
                 allHandsHaveTwoCards =
                     allPlayersHaveCond updatedPlayers (\h -> List.length h.cards == 2)
+
+                allPlayersStandingOrBusted =
+                    allPlayersHaveCond updatedPlayers (\h -> List.member h.state [ Standing, Busted ])
             in
             ( { model
                 | deck = deck
@@ -236,24 +274,52 @@ update msg model =
                         model.state
               }
             , if allPlayersHaveOneCard then
-                Cmd.batch
-                    [ Process.sleep 1000 |> Task.perform (\_ -> DealerTakesCard)
-                    , Process.sleep 1000 |> Task.perform (\_ -> Deal)
-                    ]
+                Process.sleep 1000 |> Task.perform (\_ -> DealerTakesCard)
 
               else if allHandsHaveTwoCards then
                 Process.sleep 1000 |> Task.perform (\_ -> DealerTakesCard)
 
+              else if allPlayersStandingOrBusted then
+                Process.sleep 1000 |> Task.perform (\_ -> DealerFinish)
+
               else
                 Process.sleep 1000 |> Task.perform (\_ -> Deal)
             )
+                |> toastIf (state == Standing) "Black Jack!"
 
         DealerTakesCard ->
             let
                 ( cards, deck ) =
                     Deck.takeCard model.deck
+
+                updatedHand =
+                    model.dealer ++ cards
+
+                hasTwoCards =
+                    List.length updatedHand == 2
+
+                allPlayersStandingOrBusted =
+                    allPlayersHaveCond model.players (\h -> List.member h.state [ Standing, Busted ])
             in
-            ( { model | dealer = model.dealer ++ cards, deck = deck }, Cmd.none )
+            ( { model
+                | dealer = updatedHand
+                , state =
+                    if hasTwoCards then
+                        HitOrStand
+
+                    else
+                        model.state
+                , deck = deck
+              }
+            , if allPlayersStandingOrBusted then
+                Process.sleep 1000 |> Task.perform (\_ -> DealerFinish)
+
+              else if hasTwoCards then
+                Cmd.none
+
+              else
+                Process.sleep 1000 |> Task.perform (\_ -> Deal)
+            )
 
         {- Hit or Stand -}
         -- Add card to player hand
@@ -262,26 +328,38 @@ update msg model =
                 ( cards, deck ) =
                     Deck.takeCard model.deck
 
+                ( currentHand, rest ) =
+                    currentPlayer.hands
+
+                updatedCards =
+                    currentHand.cards ++ cards
+
+                state =
+                    case Basics.compare (Hand.largestValue updatedCards) 21 of
+                        GT ->
+                            -- TODO: Switch to next hand
+                            Busted
+
+                        EQ ->
+                            -- TODO: Show toast that you got black jack
+                            Standing
+
+                        LT ->
+                            Playing
+
+                updatedCurrentHand =
+                    { currentHand | cards = updatedCards, state = state }
+
                 updatedPlayer =
                     { currentPlayer
                         | hands =
-                            updateCurrentHand currentPlayer.hands
-                                (\h ->
-                                    { h
-                                        | cards = h.cards ++ cards
-                                        , state =
-                                            case Basics.compare (Tuple.first (Hand.value (h.cards ++ cards))) 21 of
-                                                GT ->
-                                                    -- TODO: Switch to next hand
-                                                    Busted
+                            (if state == Busted then
+                                continueToNextHand
 
-                                                EQ ->
-                                                    Standing
-
-                                                LT ->
-                                                    Playing
-                                    }
-                                )
+                             else
+                                identity
+                            )
+                                ( updatedCurrentHand, rest )
                     }
 
                 updatedPlayers =
@@ -306,6 +384,8 @@ update msg model =
               else
                 Cmd.none
             )
+                |> toastIf (state == Standing) "Black Jack!"
+                |> toastIf (state == Busted) "Bust!"
 
         -- Continue to next player
         -- Stand on which hand?
@@ -413,9 +493,7 @@ update msg model =
         DealerFinish ->
             let
                 lowestDealerHandValue =
-                    model.dealer
-                        |> Hand.value
-                        |> (\( v1, v2 ) -> min v1 v2)
+                    model.dealer |> Hand.largestValue
 
                 dealerHasReachedLimit =
                     lowestDealerHandValue >= 17
@@ -443,12 +521,25 @@ update msg model =
                 dealerHandValue =
                     Hand.largestValue model.dealer
 
+                win =
+                    calculateWinnings dealerHandValue currentPlayer
+
+                totalBet =
+                    currentPlayer.hands |> playerHands |> List.map .bet |> List.sum
+
                 updatedPlayers =
                     ( { currentPlayer | money = currentPlayer.money + calculateWinnings dealerHandValue currentPlayer }
                     , List.map (\p -> { p | money = p.money + calculateWinnings dealerHandValue p }) players
                     )
             in
             ( { model | players = updatedPlayers }, Cmd.none )
+                |> toast
+                    (if win == 0 then
+                        "You lost $" ++ String.fromInt totalBet ++ "!"
+
+                     else
+                        "You won $" ++ String.fromInt win ++ "!"
+                    )
 
         NextRound ->
             let
@@ -459,6 +550,12 @@ update msg model =
                     initalState
             in
             ( { newState | state = Betting, deck = model.deck, players = cleared }, Cmd.none )
+
+        ShowToast message ->
+            ( { model | toast = Just message }, clearAlert )
+
+        ClearToast ->
+            ( { model | toast = Nothing }, Cmd.none )
 
 
 view : Model -> Html.Html Msg
@@ -476,6 +573,12 @@ view model =
             [ Html.text "" ]
          )
             ++ [ actionsView model.state currentPlayer
+               , case model.toast of
+                    Just message ->
+                        toastView message
+
+                    Nothing ->
+                        Html.text ""
                ]
         )
 
@@ -614,8 +717,8 @@ hitOrStandView { money, hands } =
     Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
         [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Take a card" ]
         , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Stand" ]
-        , if canSplit cards && money > bet then
-            Html.button [ Html.Events.onClick Split, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Split" ]
+        , if canSplit cards then
+            Html.button [ Html.Events.onClick Split, Html.Attributes.disabled (state /= Playing || money < bet) ] [ Html.text "Split" ]
 
           else
             Html.text ""
@@ -628,6 +731,13 @@ hitOrStandView { money, hands } =
 
           else
             Html.text ""
+        ]
+
+
+toastView : String -> Html.Html msg
+toastView message =
+    Html.div [ Html.Attributes.class "toast" ]
+        [ Html.div [ Html.Attributes.class "message " ] [ Html.text message ]
         ]
 
 
@@ -736,3 +846,22 @@ calculateWinnings dealerHand { hands } =
                 (playerHands hands)
     in
     winnings
+
+
+clearAlert : Cmd Msg
+clearAlert =
+    Process.sleep 2000 |> Task.perform (\_ -> ClearToast)
+
+
+toast : String -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+toast message ( model, cmd ) =
+    ( { model | toast = Just message }, Cmd.batch [ cmd, clearAlert ] )
+
+
+toastIf : Bool -> String -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+toastIf cond message =
+    if cond then
+        toast message
+
+    else
+        identity
