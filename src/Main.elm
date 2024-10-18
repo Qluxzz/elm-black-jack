@@ -1,7 +1,7 @@
 module Main exposing (main)
 
 import Browser
-import Card exposing (Card, Suit(..), Value(..))
+import Card exposing (Card)
 import Deck
 import Hand
 import Html
@@ -110,8 +110,8 @@ initalState =
     , dealer = []
     , players =
         ( { type_ = AI
-          , money = 50
-          , hands = ( { cards = [], bet = 0, state = Playing, order = 0 }, [] )
+          , money = 500
+          , hands = emptyHands
           , order = 0
           }
         , []
@@ -185,7 +185,7 @@ update msg model =
                         model.state
                 , players =
                     if allHandsHaveBet then
-                        continueToNextPlayer updatedPlayer players
+                        nextPlayer updatedPlayer players
 
                     else
                         ( updatedPlayer, players )
@@ -227,7 +227,7 @@ update msg model =
                     { currentPlayer
                         | hands =
                             (if state == Busted then
-                                continueToNextHand
+                                nextHand
 
                              else
                                 identity
@@ -244,7 +244,7 @@ update msg model =
 
                 updatedPlayers =
                     if currentHandHasTwoCards then
-                        continueToNextPlayer updatedPlayer players
+                        nextPlayer updatedPlayer players
 
                     else
                         ( updatedPlayer, players )
@@ -349,7 +349,7 @@ update msg model =
                     { currentPlayer
                         | hands =
                             (if state == Busted then
-                                continueToNextHand
+                                nextHand
 
                              else
                                 identity
@@ -382,13 +382,11 @@ update msg model =
                 |> toastIf (state == Standing) "Black Jack!"
                 |> toastIf (state == Busted) "Bust!"
 
-        -- Continue to next player
-        -- Stand on which hand?
         Stand ->
             let
                 updatedPlayer =
                     { currentPlayer
-                        | hands = continueToNextHand <| updateCurrentHand currentPlayer.hands (\h -> { h | state = Standing })
+                        | hands = nextHand <| updateCurrentHand currentPlayer.hands (\h -> { h | state = Standing })
                     }
 
                 updatedPlayers =
@@ -413,7 +411,7 @@ update msg model =
                 Cmd.none
             )
 
-        -- Split current player hands into two, allow player to take a card/stand/split/doubledown on each hand
+        -- Split current hand into two, allow player to take a card/stand/split/doubledown on each hand
         Split ->
             let
                 ( currentHand, rest ) =
@@ -542,6 +540,10 @@ update msg model =
 
         ClearToast ->
             ( { model | toast = Nothing }, Cmd.none )
+
+
+
+-- VIEWS
 
 
 view : Model -> Html.Html Msg
@@ -765,7 +767,7 @@ updateCurrentHand ( currentHand, rest ) new =
 
 clearHands : Player -> Player
 clearHands player =
-    { player | hands = ( { cards = [], bet = 0, state = Playing, order = 0 }, [] ) }
+    { player | hands = emptyHands }
 
 
 canSplit : Hand.Hand -> Bool
@@ -778,8 +780,8 @@ canSplit hand =
             False
 
 
-continueToNextPlayer : Player -> List Player -> ( Player, List Player )
-continueToNextPlayer currentPlayer rest =
+nextPlayer : Player -> List Player -> ( Player, List Player )
+nextPlayer currentPlayer rest =
     case rest of
         x :: xs ->
             ( x, xs ++ [ currentPlayer ] )
@@ -788,8 +790,8 @@ continueToNextPlayer currentPlayer rest =
             ( currentPlayer, rest )
 
 
-continueToNextHand : ( Hand, List Hand ) -> ( Hand, List Hand )
-continueToNextHand ( currentHand, rest ) =
+nextHand : ( Hand, List Hand ) -> ( Hand, List Hand )
+nextHand ( currentHand, rest ) =
     case rest of
         x :: xs ->
             ( x, xs ++ [ currentHand ] )
@@ -801,28 +803,29 @@ continueToNextHand ( currentHand, rest ) =
 calculateWinnings : Int -> Player -> Int
 calculateWinnings dealerHand { hands } =
     List.foldr
-        (\{ cards, bet, state } acc ->
-            if state == Busted then
-                -- You busted, no win
-                acc
+        (\{ cards, bet, state } ->
+            \acc ->
+                if state == Busted then
+                    -- You busted, no win
+                    acc
 
-            else if dealerHand > 21 then
-                -- Dealer busted, automatic win
-                acc + bet * 2
+                else if dealerHand > 21 then
+                    -- Dealer busted, automatic win
+                    acc + bet * 2
 
-            else
-                case Basics.compare (Hand.largestValue cards) dealerHand of
-                    GT ->
-                        -- You won over the dealer, you get 2x your bet back
-                        acc + bet * 2
+                else
+                    case Basics.compare (Hand.largestValue cards) dealerHand of
+                        GT ->
+                            -- You won over the dealer, you get 2x your bet back
+                            acc + bet * 2
 
-                    EQ ->
-                        -- Push, you get your inital bet back
-                        acc + bet
+                        EQ ->
+                            -- Push, you get your inital bet back
+                            acc + bet
 
-                    LT ->
-                        -- You lost to the dealer
-                        acc
+                        LT ->
+                            -- You lost to the dealer
+                            acc
         )
         0
         (playerHands hands)
@@ -831,6 +834,11 @@ calculateWinnings dealerHand { hands } =
 clearAlert : Cmd Msg
 clearAlert =
     Process.sleep 2000 |> Task.perform (\_ -> ClearToast)
+
+
+emptyHands : ( Hand, List Hand )
+emptyHands =
+    ( { cards = [], bet = 0, state = Playing, order = 0 }, [] )
 
 
 toast : String -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )

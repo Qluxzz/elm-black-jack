@@ -1,6 +1,6 @@
 module Deck exposing (Deck, decks, takeCard, takeCards)
 
-import Card exposing (..)
+import Card exposing (Card, Suit(..), Value(..))
 
 
 type alias Deck =
