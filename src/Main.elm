@@ -685,10 +685,22 @@ bettingView : Player -> Html.Html Msg
 bettingView { money } =
     Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
         (([ 1, 10, 100, 500 ]
-            |> List.filter (\amount -> amount <= amount)
             |> List.map
                 (\amount ->
-                    Html.div [ Html.Attributes.class "marker", Html.Attributes.class ("_" ++ String.fromInt amount), Html.Events.onClick (Bet amount), Html.Attributes.disabled (money < amount) ] [ Html.text ("$" ++ String.fromInt amount) ]
+                    Html.div
+                        [ Html.Attributes.class "marker"
+                        , Html.Attributes.attribute "role" "button"
+                        , Html.Attributes.class ("_" ++ String.fromInt amount)
+                        , Html.Attributes.classList [ ( "disabled", money < amount ) ]
+                        , Html.Events.onClick
+                            (if money < amount then
+                                NoOp
+
+                             else
+                                Bet amount
+                            )
+                        ]
+                        [ Html.text ("$" ++ String.fromInt amount) ]
                 )
          )
             ++ (if money > 500 then

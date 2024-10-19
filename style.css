@@ -419,4 +419,9 @@ body>div {
         border-color: white;
         color: white;
     }
+
+    &.disabled {
+        filter: opacity(0.2);
+        pointer-events: none;
+    }
 }
