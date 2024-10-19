@@ -13,6 +13,8 @@ html,
 body {
     height: 100%;
     overflow: hidden;
+    font-family: monospace;
+    font-size: 1.2em;
 }
 
 body {
@@ -78,6 +80,7 @@ body>div {
     left: 0;
     right: 0;
     justify-content: center;
+    align-items: center;
     display: flex;
     gap: 10px;
 }
@@ -152,7 +155,9 @@ body>div {
 
 }
 
-
+.dealer {
+    height: 200px;
+}
 
 /* CARDS */
 
@@ -379,4 +384,39 @@ body>div {
 .king::before,
 .king::after {
     content: 'K';
+}
+
+/* CHIP/MARKER */
+
+.marker {
+    width: 64px;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    border: 4px dashed black;
+    background-color: green;
+    color: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+
+    &._1 {
+        background-color: white;
+    }
+
+    &._10 {
+        background-color: red;
+    }
+
+    &._100 {
+        background-color: cyan;
+    }
+
+    &._500 {
+        background-color: black;
+        border-color: white;
+        color: white;
+    }
 }

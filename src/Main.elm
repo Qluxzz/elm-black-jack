@@ -448,14 +448,20 @@ update msg model =
                 updatedPlayer =
                     { currentPlayer
                         | hands =
-                            updateCurrentHand currentPlayer.hands
-                                (\h ->
-                                    { h
-                                        | state = Standing
-                                        , bet = h.bet * 2
-                                        , cards = h.cards ++ cards
-                                    }
-                                )
+                            nextHand <|
+                                updateCurrentHand currentPlayer.hands
+                                    (\h ->
+                                        { h
+                                            | state =
+                                                if Hand.largestValue (h.cards ++ cards) > 21 then
+                                                    Busted
+
+                                                else
+                                                    Standing
+                                            , bet = h.bet * 2
+                                            , cards = h.cards ++ cards
+                                        }
+                                    )
                         , money = currentPlayer.money - (currentBet * 2)
                     }
 
@@ -583,32 +589,30 @@ cardView hidden card =
 
 dealerView : Dealer -> GameState -> Html.Html Msg
 dealerView dealer state =
-    if List.member state [ DealerFinishes, Result ] then
-        Html.div []
-            [ Html.div [ Html.Attributes.class "cards" ] (List.map (cardView False) dealer)
-            ]
+    Html.div [ Html.Attributes.class "dealer" ]
+        [ if List.member state [ DealerFinishes, Result ] then
+            Html.div [ Html.Attributes.class "dealer" ]
+                [ Html.div [ Html.Attributes.class "cards" ] (List.map (cardView False) dealer)
+                ]
 
-    else
-        case dealer of
-            first :: [] ->
-                Html.div []
-                    [ Html.div [ Html.Attributes.class "cards" ]
+          else
+            case dealer of
+                first :: [] ->
+                    Html.div [ Html.Attributes.class "cards" ]
                         [ cardView False first
                         ]
-                    ]
 
-            first :: second :: rest ->
-                Html.div []
-                    [ Html.div [ Html.Attributes.class "cards" ]
+                first :: second :: rest ->
+                    Html.div [ Html.Attributes.class "cards" ]
                         ([ cardView False first
                          , cardView (state /= Result) second
                          ]
                             ++ List.map (cardView False) rest
                         )
-                    ]
 
-            [] ->
-                Html.p [] [ Html.text "Dealer has no cards yet" ]
+                [] ->
+                    Html.text ""
+        ]
 
 
 playerView : Player -> Html.Html Msg
@@ -682,12 +686,14 @@ actionsView state player =
 bettingView : Player -> Html.Html Msg
 bettingView { money } =
     Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
-        (List.map
-            (\amount ->
-                Html.button [ Html.Events.onClick (Bet amount), Html.Attributes.disabled (money < amount) ] [ Html.text ("Bet $" ++ String.fromInt amount) ]
-            )
-            [ 1, 5, 10, 25, 50 ]
-            ++ (if money > 50 then
+        (([ 1, 10, 100, 500 ]
+            |> List.filter (\amount -> amount <= amount)
+            |> List.map
+                (\amount ->
+                    Html.div [ Html.Attributes.class "marker", Html.Attributes.class ("_" ++ String.fromInt amount), Html.Events.onClick (Bet amount), Html.Attributes.disabled (money < amount) ] [ Html.text ("$" ++ String.fromInt amount) ]
+                )
+         )
+            ++ (if money > 500 then
                     [ Html.button [ Html.Events.onClick (Bet money) ] [ Html.text "All in!" ] ]
 
                 else
@@ -812,6 +818,10 @@ calculateWinnings dealerHand { hands } =
                 else if dealerHand > 21 then
                     -- Dealer busted, automatic win
                     acc + bet * 2
+
+                else if Hand.largestValue cards == 21 then
+                    -- Black Jack, pays 3 to 2
+                    acc + bet * 3
 
                 else
                     case Basics.compare (Hand.largestValue cards) dealerHand of
