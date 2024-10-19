@@ -591,9 +591,7 @@ dealerView : Dealer -> GameState -> Html.Html Msg
 dealerView dealer state =
     Html.div [ Html.Attributes.class "dealer" ]
         [ if List.member state [ DealerFinishes, Result ] then
-            Html.div [ Html.Attributes.class "dealer" ]
-                [ Html.div [ Html.Attributes.class "cards" ] (List.map (cardView False) dealer)
-                ]
+            Html.div [ Html.Attributes.class "cards" ] (List.map (cardView False) dealer)
 
           else
             case dealer of
