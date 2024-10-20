@@ -222,7 +222,7 @@ update msg model =
                         model.state
                 , players =
                     if allHandsHaveBet then
-                        nextPlayer updatedPlayer players
+                        next ( updatedPlayer, players )
 
                     else
                         ( updatedPlayer, players )
@@ -263,12 +263,10 @@ update msg model =
                 updatedPlayer =
                     { currentPlayer
                         | hands =
-                            (if state == Busted then
-                                nextHand
+                            if state == Busted then
+                                next ( updatedCurrentHand, rest )
 
-                             else
-                                identity
-                            )
+                            else
                                 ( updatedCurrentHand, rest )
                     }
 
@@ -281,7 +279,7 @@ update msg model =
 
                 updatedPlayers =
                     if currentHandHasTwoCards then
-                        nextPlayer updatedPlayer players
+                        next ( updatedPlayer, players )
 
                     else
                         ( updatedPlayer, players )
@@ -383,12 +381,10 @@ update msg model =
                 updatedPlayer =
                     { currentPlayer
                         | hands =
-                            (if List.member state [ Standing, Busted ] then
-                                nextHand
+                            if List.member state [ Standing, Busted ] then
+                                next ( updatedCurrentHand, rest )
 
-                             else
-                                identity
-                            )
+                            else
                                 ( updatedCurrentHand, rest )
                     }
 
@@ -427,7 +423,7 @@ update msg model =
             let
                 updatedPlayer =
                     { currentPlayer
-                        | hands = nextHand <| updateCurrentHand currentPlayer.hands (\h -> { h | state = Standing })
+                        | hands = next <| updateCurrentHand currentPlayer.hands (\h -> { h | state = Standing })
                     }
 
                 -- Can happen when splitting
@@ -511,7 +507,7 @@ update msg model =
                 updatedPlayer =
                     { currentPlayer
                         | hands =
-                            nextHand <|
+                            next <|
                                 updateCurrentHand currentPlayer.hands
                                     (\h ->
                                         { h
@@ -865,24 +861,14 @@ canSplit hand =
             False
 
 
-nextPlayer : Player -> List Player -> ( Player, List Player )
-nextPlayer currentPlayer rest =
+next : ( x, List x ) -> ( x, List x )
+next ( current, rest ) =
     case rest of
         x :: xs ->
-            ( x, xs ++ [ currentPlayer ] )
+            ( x, xs ++ [ current ] )
 
         _ ->
-            ( currentPlayer, rest )
-
-
-nextHand : ( Hand, List Hand ) -> ( Hand, List Hand )
-nextHand ( currentHand, rest ) =
-    case rest of
-        x :: xs ->
-            ( x, xs ++ [ currentHand ] )
-
-        _ ->
-            ( currentHand, rest )
+            ( current, rest )
 
 
 calculateWinnings : Int -> Player -> Int

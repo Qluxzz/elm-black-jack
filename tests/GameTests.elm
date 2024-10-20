@@ -435,7 +435,7 @@ simulateEffects delay effect =
         Main.TakeCard_ ->
             setTimeout Main.TakeCard
 
-        Main.DealerFinish_ _ ->
+        Main.DealerFinish_ ->
             setTimeout Main.DealerFinish
 
         Main.Winnings_ ->
