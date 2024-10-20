@@ -495,6 +495,19 @@ update msg model =
                 ( cards, deck ) =
                     Deck.takeCard model.deck
 
+                ( currentHand, _ ) =
+                    currentPlayer.hands
+
+                updatedHand =
+                    { currentHand | cards = currentHand.cards ++ cards }
+
+                state =
+                    if Hand.largestValue updatedHand.cards > 21 then
+                        Busted
+
+                    else
+                        Standing
+
                 updatedPlayer =
                     { currentPlayer
                         | hands =
@@ -502,12 +515,7 @@ update msg model =
                                 updateCurrentHand currentPlayer.hands
                                     (\h ->
                                         { h
-                                            | state =
-                                                if Hand.largestValue (h.cards ++ cards) > 21 then
-                                                    Busted
-
-                                                else
-                                                    Standing
+                                            | state = state
                                             , bet = h.bet * 2
                                             , cards = h.cards ++ cards
                                         }
@@ -545,6 +553,7 @@ update msg model =
               else
                 NoEffect
             )
+                |> toastIf (state == Busted) "Bust!"
 
         -- All players are now finished
         DealerFinish ->

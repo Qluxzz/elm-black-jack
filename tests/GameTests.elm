@@ -29,8 +29,8 @@ suite =
                         ]
                     |> ProgramTest.clickButton "$100"
                     -- Validate that the user has the expected cards
-                    |> ProgramTest.ensureViewHas
-                        (playerHasCards [ Card Card.Ace Card.Spades, Card Card.Three Card.Spades ])
+                    |> ProgramTest.ensureView
+                        (handHasCards 0 [ Card Card.Ace Card.Spades, Card Card.Three Card.Spades ])
                     -- Validate that the player money has decreased according to the bet
                     -- And that we're in the hit or stand phase of the game
                     |> ProgramTest.ensureView (playerHasMoney 300)
@@ -41,8 +41,8 @@ suite =
                         ]
                     |> ProgramTest.clickButton "Hit"
                     -- Ensure player has three cards after taking another card
-                    |> ProgramTest.ensureViewHas
-                        (playerHasCards [ Card Card.Ace Card.Spades, Card Card.Three Card.Spades, Card Card.Five Card.Spades ])
+                    |> ProgramTest.ensureView
+                        (handHasCards 0 [ Card Card.Ace Card.Spades, Card Card.Three Card.Spades, Card Card.Five Card.Spades ])
                     |> ProgramTest.clickButton "Stand"
                     -- Ensure player won after clicking stand
                     |> ProgramTest.ensureView (playerHasMoney 400)
@@ -228,37 +228,60 @@ suite =
                         ]
                     |> ProgramTest.clickButton "$500"
                     |> ProgramTest.expectViewHas [ Selector.exactText "$15" ]
-        , test "Double down works" <|
-            \_ ->
-                start
-                    (defaultSettings
-                        |> withDeck
-                            [ Card Card.Five Card.Spades
-                            , Card Card.Eight Card.Diamonds
-                            , Card Card.Five Card.Clubs
-                            , Card Card.Four Card.Hearts
-                            , Card Card.Ten Card.Diamonds
+        , describe "Double down"
+            [ test "Double down works" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck
+                                [ Card Card.Five Card.Spades
+                                , Card Card.Eight Card.Diamonds
+                                , Card Card.Five Card.Clubs
+                                , Card Card.Four Card.Hearts
+                                , Card Card.Ten Card.Diamonds
 
-                            -- Add another card so dealer busts on 22 (8 + 4 + 10)
-                            , Card Card.Ten Card.Diamonds
-                            ]
-                    )
-                    |> ProgramTest.clickButton "$100"
-                    |> ProgramTest.ensureView
-                        (Expect.all
-                            [ handHasCards 0 [ Card Card.Five Card.Spades, Card Card.Five Card.Clubs ]
-                            , handHasBet 0 100
-                            ]
+                                -- Add another card so dealer busts on 22 (8 + 4 + 10)
+                                , Card Card.Ten Card.Diamonds
+                                ]
                         )
-                    |> ProgramTest.clickButton "Double down"
-                    |> ProgramTest.ensureView
-                        (Expect.all
-                            [ playerHasMoney 500
-                            , handHasBet 0 200
-                            , handHasCards 0 [ Card Card.Five Card.Spades, Card Card.Five Card.Clubs, Card Card.Ten Card.Diamonds ]
-                            ]
+                        |> ProgramTest.clickButton "$100"
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Five Card.Spades, Card Card.Five Card.Clubs ]
+                                , handHasBet 0 100
+                                ]
+                            )
+                        |> ProgramTest.clickButton "Double down"
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ playerHasMoney 500
+                                , handHasBet 0 200
+                                , handHasCards 0 [ Card Card.Five Card.Spades, Card Card.Five Card.Clubs, Card Card.Ten Card.Diamonds ]
+                                ]
+                            )
+                        |> ProgramTest.expectViewHas [ continueButton ]
+            , test "Show toast if bust when doubling down" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck
+                                [ Card Card.Ten Card.Spades
+                                , Card Card.Eight Card.Diamonds -- Dealer takes
+                                , Card Card.Five Card.Clubs
+                                , Card Card.Four Card.Hearts -- Dealer takes
+                                , Card Card.Ten Card.Diamonds
+
+                                -- Add another card so dealer busts on 22 (8 + 4 + 10)
+                                , Card Card.Ten Card.Diamonds
+                                ]
+                            |> withDelay
                         )
-                    |> ProgramTest.expectViewHas [ continueButton ]
+                        |> ProgramTest.clickButton "$100"
+                        -- Deal a card per 'tick', so four means the dealer and the player has two cards each
+                        |> ProgramTest.advanceTime 4
+                        |> ProgramTest.clickButton "Double down"
+                        |> ProgramTest.expectView (toastHasMessage "Bust!")
+            ]
         , test "Bust if more than 21 in value" <|
             \_ ->
                 start
@@ -283,6 +306,24 @@ suite =
                     -- TODO: We're setting multiple toasts here, first one for that we have busted,
                     -- and then directly after one that we lost, should we support multiple toasts that stack or add a delay for the toasts?
                     |> ProgramTest.expectView (toastHasMessage "You lost $100!")
+        , test "Dealer second card should be visible before taking third card" <|
+            \_ ->
+                start
+                    (defaultSettings
+                        |> withDeck
+                            [ Card Card.Ace Card.Diamonds
+                            , Card Card.Four Card.Spades -- Dealer
+                            , Card Card.Jack Card.Spades
+                            , Card Card.Three Card.Hearts -- Dealer
+                            , Card Card.Ten Card.Clubs
+                            ]
+                        |> withDelay
+                    )
+                    |> ProgramTest.clickButton "$100"
+                    |> ProgramTest.advanceTime 3
+                    |> ProgramTest.ensureView (toastHasMessage "Black Jack!")
+                    |> ProgramTest.advanceTime 1
+                    |> ProgramTest.expectView (dealerHasCards [ Card Card.Four Card.Spades, Card Card.Three Card.Hearts ])
         ]
 
 
@@ -290,15 +331,9 @@ suite =
 -- Custom selectors
 
 
-playerHasCards : List Card.Card -> List Selector.Selector
-playerHasCards =
-    List.map
-        (\card ->
-            Selector.all
-                [ Selector.exactClassName "player"
-                , cardValue card
-                ]
-        )
+allCards : List Card.Card -> List Selector.Selector
+allCards cards =
+    List.map (\c1 -> Selector.all [ cardValue c1 ]) cards
 
 
 cardValue : Card.Card -> Selector.Selector
@@ -319,15 +354,7 @@ handHasCards index cards query =
     query
         |> playerHands
         |> Query.index -index
-        |> Query.has
-            (List.map
-                (\c1 ->
-                    Selector.all
-                        [ Selector.attribute (Attributes.attribute "test-id" (Card.toString c1))
-                        ]
-                )
-                cards
-            )
+        |> Query.has (allCards cards)
 
 
 playerHasMoney : Int -> Query.Single msg -> Expect.Expectation
@@ -357,6 +384,18 @@ toastHasMessage message query =
         |> Query.has [ Selector.exactText message ]
 
 
+dealerHasCards : List Card.Card -> Query.Single msg -> Expect.Expectation
+dealerHasCards cards query =
+    query
+        |> Query.find [ Selector.class "dealer" ]
+        |> Query.find [ Selector.class "cards" ]
+        |> Expect.all
+            [ Query.has (allCards cards)
+            , Query.find [ Selector.class "card-inner" ]
+                >> Query.hasNot [ Selector.class "hidden" ]
+            ]
+
+
 
 -- Helpers
 
@@ -366,47 +405,63 @@ toDollars amount =
     "$" ++ String.fromInt amount
 
 
-simulateEffects : Main.Effect -> ProgramTest.SimulatedEffect Main.Msg
-simulateEffects effect =
+simulateEffects : Bool -> Main.Effect -> ProgramTest.SimulatedEffect Main.Msg
+simulateEffects delay effect =
+    let
+        setTimeout : Main.Msg -> ProgramTest.SimulatedEffect Main.Msg
+        setTimeout msg =
+            SimulatedEffect.Process.sleep
+                (if delay then
+                    1
+
+                 else
+                    0
+                )
+                |> SimulatedEffect.Task.perform (\_ -> msg)
+    in
     case effect of
         Main.NoEffect ->
             SimulatedEffect.Cmd.none
 
         Main.ShuffleDeck_ deck ->
-            SimulatedEffect.Process.sleep 0 |> SimulatedEffect.Task.perform (\_ -> Main.ShuffledDeck deck)
+            setTimeout (Main.ShuffledDeck deck)
 
         Main.Deal_ ->
-            SimulatedEffect.Process.sleep 0 |> SimulatedEffect.Task.perform (\_ -> Main.Deal)
+            setTimeout Main.Deal
 
         Main.DealerTakesCard_ ->
-            SimulatedEffect.Process.sleep 0 |> SimulatedEffect.Task.perform (\_ -> Main.DealerTakesCard)
+            setTimeout Main.DealerTakesCard
 
         Main.TakeCard_ ->
-            SimulatedEffect.Process.sleep 0 |> SimulatedEffect.Task.perform (\_ -> Main.TakeCard)
+            setTimeout Main.TakeCard
 
-        Main.DealerFinish_ ->
-            SimulatedEffect.Process.sleep 0 |> SimulatedEffect.Task.perform (\_ -> Main.DealerFinish)
+        Main.DealerFinish_ _ ->
+            setTimeout Main.DealerFinish
 
         Main.Winnings_ ->
-            SimulatedEffect.Process.sleep 0 |> SimulatedEffect.Task.perform (\_ -> Main.Winnings)
+            setTimeout Main.Winnings
 
         Main.ClearToast_ ->
             -- Set 1 here, so we need to manually advance the time to get rid of the toast
             SimulatedEffect.Process.sleep 1 |> SimulatedEffect.Task.perform (\_ -> Main.ClearToast)
 
         Main.Multiple effects ->
-            SimulatedEffect.Cmd.batch (List.map simulateEffects effects)
+            SimulatedEffect.Cmd.batch (List.map (simulateEffects delay) effects)
 
 
 type alias Settings =
     { deck : Maybe Deck.Deck
     , players : Maybe ( Main.Player, List Main.Player )
+    , delay : Bool
     }
 
 
 defaultSettings : Settings
 defaultSettings =
-    { deck = Nothing, players = Just ( { money = 400, hands = Main.emptyHands, order = 0 }, [] ) }
+    { deck = Nothing
+    , players = Just ( { money = 400, hands = Main.emptyHands, order = 0 }, [] )
+    , delay = False
+    }
 
 
 withDeck : Deck.Deck -> Settings -> Settings
@@ -417,6 +472,13 @@ withDeck d m =
 withPlayers : ( Main.Player, List Main.Player ) -> Settings -> Settings
 withPlayers p m =
     { m | players = Just p }
+
+
+{-| Makes it so all Process.sleep takes 1 instead of 0 so you can use ProgramTest.advanceTime to advance through the messages
+-}
+withDelay : Settings -> Settings
+withDelay m =
+    { m | delay = True }
 
 
 start : Settings -> ProgramTest.ProgramTest Main.Model Main.Msg Main.Effect
@@ -442,6 +504,5 @@ start settings =
         , update = Main.update
         , view = Main.view
         }
-        |> ProgramTest.withSimulatedEffects simulateEffects
+        |> ProgramTest.withSimulatedEffects (simulateEffects settings.delay)
         |> ProgramTest.start ()
-        |> ProgramTest.advanceTime 10
