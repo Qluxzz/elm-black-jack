@@ -406,9 +406,11 @@ body>div {
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
     cursor: pointer;
     opacity: 0.8;
+    transition: transform 200ms;
 
     &:hover {
         opacity: 1;
+        transform: translateY(-10px);
     }
 
     &._1 {
