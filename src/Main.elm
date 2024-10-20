@@ -89,7 +89,7 @@ perform effect =
             Process.sleep 1000 |> Task.perform (\_ -> TakeCard)
 
         DealerFinish_ ->
-            Process.sleep 1000 |> Task.perform (\_ -> DealerFinish)
+            Process.sleep 0 |> Task.perform (\_ -> DealerFinish)
 
         Winnings_ ->
             Process.sleep 0 |> Task.perform (\_ -> Winnings)
@@ -175,7 +175,19 @@ init =
 main : Program () Model Msg
 main =
     Browser.element
-        { init = \_ -> init |> Tuple.mapSecond perform
+        { init =
+            \_ ->
+                initWithDeck
+                    [ Card Card.Eight Card.Diamonds
+                    , Card Card.Six Card.Diamonds -- Dealer takes
+                    , Card Card.Eight Card.Spades
+                    , Card Card.Six Card.Diamonds -- Dealer takes
+                    , Card Card.Ten Card.Hearts
+                    , Card Card.Two Card.Clubs
+                    , Card Card.Ten Card.Hearts
+                    , Card Card.Ten Card.Diamonds -- Dealer takes and busts (6+6+10 > 21)
+                    ]
+                    |> Tuple.mapSecond perform
         , view = \model -> view model
         , update = \msg model -> update msg model |> Tuple.mapSecond perform
         , subscriptions = \_ -> Sub.none
@@ -520,6 +532,11 @@ update msg model =
 
                 allPlayersStandingOrBusted =
                     allPlayersHaveCond updatedPlayers (\h -> List.member h.state [ Standing, Busted ])
+
+                nextHandHasTwoCards =
+                    updatedPlayer.hands
+                        |> Tuple.first
+                        |> (\h -> List.length h.cards >= 2)
             in
             ( { model
                 | players = updatedPlayers
@@ -533,6 +550,9 @@ update msg model =
               }
             , if allPlayersStandingOrBusted then
                 DealerFinish_
+
+              else if not nextHandHasTwoCards then
+                TakeCard_
 
               else
                 NoEffect
@@ -554,11 +574,7 @@ update msg model =
                 ( { model | state = Result }, Winnings_ )
 
             else
-                let
-                    ( cards, deck ) =
-                        Deck.takeCard model.deck
-                in
-                ( { model | dealer = model.dealer ++ cards, deck = deck }, DealerFinish_ )
+                ( model, DealerTakesCard_ )
 
         -- Dealer has busted or reached 17 now
         Winnings ->

@@ -91,8 +91,8 @@ suite =
                                 , handHasBet 0 100
                                 ]
                             )
-                        |> ProgramTest.clickButton "Double down"
                         -- Now the second hand should be selected to hit/stand/double down with
+                        |> ProgramTest.clickButton "Double down"
                         |> ProgramTest.ensureView
                             (Expect.all
                                 [ handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Five Card.Hearts ]
@@ -154,6 +154,60 @@ suite =
                                 , handHasCards 1 [ Card Card.Ace Card.Spades, Card Card.Nine Card.Clubs ]
                                 ]
                             )
+                        |> ProgramTest.ensureView (playerHasMoney 600)
+                        |> ProgramTest.expectViewHas [ continueButton ]
+            , test "Splitting and doubling down on first hand does not lock up game" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck
+                                [ Card Card.Eight Card.Diamonds
+                                , Card Card.Six Card.Diamonds -- Dealer takes
+                                , Card Card.Eight Card.Spades
+                                , Card Card.Six Card.Diamonds -- Dealer takes
+                                , Card Card.Ten Card.Hearts
+                                , Card Card.Two Card.Clubs
+                                , Card Card.Ten Card.Hearts
+                                , Card Card.Ten Card.Diamonds -- Dealer takes and busts (6+6+10 > 21)
+                                ]
+                        )
+                        |> ProgramTest.clickButton "$100"
+                        -- Validate that the user has the expected hand
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasBet 0 100
+                                , handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Eight Card.Spades ]
+                                ]
+                            )
+                        |> ProgramTest.clickButton "Split"
+                        -- The first hand will be given another card automatically
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Ten Card.Hearts ]
+                                , handHasBet 0 100
+                                , handHasCards 1 [ Card Card.Eight Card.Spades ]
+                                , handHasBet 1 100
+                                ]
+                            )
+                        -- Now the first hand should be selected to hit/stand/double down with
+                        |> ProgramTest.clickButton "Double down"
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Ten Card.Hearts, Card Card.Two Card.Clubs ]
+                                , handHasBet 0 200
+                                , handHasCards 1 [ Card Card.Eight Card.Spades, Card Card.Ten Card.Hearts ]
+                                , handHasBet 1 100
+                                ]
+                            )
+                        -- Now the second hand should be selected to hit/stand/double down with
+                        |> ProgramTest.clickButton "Stand"
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Ten Card.Hearts, Card Card.Two Card.Clubs ]
+                                , handHasCards 1 [ Card Card.Eight Card.Spades, Card Card.Ten Card.Hearts ]
+                                ]
+                            )
+                        |> ProgramTest.ensureView (toastHasMessage "You won $600!")
                         |> ProgramTest.ensureView (playerHasMoney 600)
                         |> ProgramTest.expectViewHas [ continueButton ]
             ]
@@ -226,6 +280,8 @@ suite =
                             ]
                         )
                     |> ProgramTest.clickButton "Hit"
+                    -- TODO: We're setting multiple toasts here, first one for that we have busted,
+                    -- and then directly after one that we lost, should we support multiple toasts that stack or add a delay for the toasts?
                     |> ProgramTest.expectView (toastHasMessage "You lost $100!")
         ]
 
