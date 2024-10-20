@@ -413,6 +413,12 @@ body>div {
         transform: translateY(-10px);
     }
 
+    &.disabled {
+        filter: opacity(0.2);
+        pointer-events: none;
+    }
+
+    /* Values */
     &._1 {
         background-color: white;
     }
@@ -429,10 +435,5 @@ body>div {
         background-color: black;
         border-color: white;
         color: white;
-    }
-
-    &.disabled {
-        filter: opacity(0.2);
-        pointer-events: none;
     }
 }
