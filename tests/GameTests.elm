@@ -215,7 +215,7 @@ suite =
             \_ ->
                 start
                     (defaultSettings
-                        |> withPlayers ( { money = 15, hands = Main.emptyHands, order = 0 }, [] )
+                        |> withPlayers ( { money = 15 }, [] )
                     )
                     |> ProgramTest.ensureViewHas
                         [ Selector.exactText "$15"
@@ -451,7 +451,7 @@ simulateEffects delay effect =
 
 type alias Settings =
     { deck : Maybe Deck.Deck
-    , players : Maybe ( Main.Player, List Main.Player )
+    , players : Maybe ( { money : Int }, List { money : Int } )
     , delay : Bool
     }
 
@@ -459,7 +459,7 @@ type alias Settings =
 defaultSettings : Settings
 defaultSettings =
     { deck = Nothing
-    , players = Just ( { money = 400, hands = Main.emptyHands, order = 0 }, [] )
+    , players = Just ( { money = 400 }, [] )
     , delay = False
     }
 
@@ -469,7 +469,7 @@ withDeck d m =
     { m | deck = Just d }
 
 
-withPlayers : ( Main.Player, List Main.Player ) -> Settings -> Settings
+withPlayers : ( { money : Int }, List { money : Int } ) -> Settings -> Settings
 withPlayers p m =
     { m | players = Just p }
 
@@ -496,7 +496,8 @@ start settings =
                     |> (\( model, effect ) ->
                             case settings.players of
                                 Just p ->
-                                    ( { model | players = p }, effect )
+                                    ( model, effect )
+                                        |> Main.withPlayers p
 
                                 Nothing ->
                                     ( model, effect )

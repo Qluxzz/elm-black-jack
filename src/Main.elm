@@ -1,4 +1,20 @@
-module Main exposing (Effect(..), Model, Msg(..), Player, emptyHands, init, initWithDeck, main, update, view)
+module Main exposing
+    ( Dealer
+    , Dollars
+    , Effect(..)
+    , GameState
+    , Hand
+    , HandState
+    , Model
+    , Msg(..)
+    , Player
+    , init
+    , initWithDeck
+    , main
+    , update
+    , view
+    , withPlayers
+    )
 
 import Browser
 import Card exposing (Card)
@@ -165,6 +181,21 @@ initalState =
 initWithDeck : Deck.Deck -> ( Model, Effect )
 initWithDeck deck =
     ( { initalState | deck = deck, state = Betting }, NoEffect )
+
+
+withPlayers : ( { money : Int }, List { money : Int } ) -> ( Model, Effect ) -> ( Model, Effect )
+withPlayers ( f, r ) ( model, effect ) =
+    ( { model
+        | players =
+            case List.indexedMap (\i { money } -> Player emptyHands money i) (f :: r) of
+                first :: rest ->
+                    ( first, rest )
+
+                _ ->
+                    ( Player emptyHands f.money 0, [] )
+      }
+    , effect
+    )
 
 
 init : ( Model, Effect )
