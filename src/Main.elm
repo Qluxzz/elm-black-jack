@@ -62,6 +62,7 @@ type Effect
       -- Betting
     | Deal_
     | DealerTakesCard_
+    | TakeCard_
     | DealerFinish_
     | Winnings_
       -- Toast
@@ -79,10 +80,13 @@ perform effect =
             Random.generate ShuffledDeck (Random.List.shuffle deck)
 
         Deal_ ->
-            Process.sleep 1000 |> Task.perform (\_ -> Deal)
+            Process.sleep 0 |> Task.perform (\_ -> Deal)
 
         DealerTakesCard_ ->
             Process.sleep 1000 |> Task.perform (\_ -> DealerTakesCard)
+
+        TakeCard_ ->
+            Process.sleep 1000 |> Task.perform (\_ -> TakeCard)
 
         DealerFinish_ ->
             Process.sleep 1000 |> Task.perform (\_ -> DealerFinish)
@@ -365,11 +369,9 @@ update msg model =
                 state =
                     case Basics.compare (Hand.largestValue updatedCards) 21 of
                         GT ->
-                            -- TODO: Switch to next hand
                             Busted
 
                         EQ ->
-                            -- TODO: Show toast that you got black jack
                             Standing
 
                         LT ->
@@ -381,7 +383,7 @@ update msg model =
                 updatedPlayer =
                     { currentPlayer
                         | hands =
-                            (if state == Busted then
+                            (if List.member state [ Standing, Busted ] then
                                 nextHand
 
                              else
@@ -395,6 +397,9 @@ update msg model =
 
                 allPlayersStandingOrBusted =
                     allPlayersHaveCond updatedPlayers (\h -> List.member h.state [ Standing, Busted ])
+
+                nextHandHasTwoCards =
+                    updatedPlayer.hands |> Tuple.first |> (\h -> List.length h.cards >= 2)
             in
             ( { model
                 | deck = deck
@@ -409,10 +414,13 @@ update msg model =
             , if allPlayersStandingOrBusted then
                 DealerFinish_
 
+              else if not nextHandHasTwoCards then
+                TakeCard_
+
               else
                 NoEffect
             )
-                |> toastIf (state == Standing) "Black Jack!"
+                |> toastIf (state == Standing && List.length updatedCurrentHand.cards == 2) "Black Jack!"
                 |> toastIf (state == Busted) "Bust!"
 
         Stand ->
@@ -421,6 +429,12 @@ update msg model =
                     { currentPlayer
                         | hands = nextHand <| updateCurrentHand currentPlayer.hands (\h -> { h | state = Standing })
                     }
+
+                -- Can happen when splitting
+                nextHandHasTwoCards =
+                    updatedPlayer.hands
+                        |> Tuple.first
+                        |> (\h -> List.length h.cards >= 2)
 
                 updatedPlayers =
                     ( updatedPlayer, players )
@@ -439,6 +453,9 @@ update msg model =
               }
             , if allPlayersStandingOrBusted then
                 DealerFinish_
+
+              else if not nextHandHasTwoCards then
+                TakeCard_
 
               else
                 NoEffect
@@ -467,7 +484,7 @@ update msg model =
                         , hands = newHands
                     }
             in
-            ( { model | players = ( updatedPlayer, players ) }, NoEffect )
+            ( { model | players = ( updatedPlayer, players ) }, TakeCard_ )
 
         -- Double bet and take another card
         DoubleDown ->
@@ -752,19 +769,23 @@ hitOrStandView { money, hands } =
     let
         ( { cards, bet, state }, _ ) =
             hands
+
+        -- We will be given another card soon, happens when splitting
+        allDisabled =
+            List.length cards == 1
     in
     Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
-        [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Hit" ]
-        , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Stand" ]
+        [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled (allDisabled || state /= Playing) ] [ Html.text "Hit" ]
+        , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled (allDisabled || state /= Playing) ] [ Html.text "Stand" ]
         , if canSplit cards then
-            Html.button [ Html.Events.onClick Split, Html.Attributes.disabled (state /= Playing || money < bet) ] [ Html.text "Split" ]
+            Html.button [ Html.Events.onClick Split, Html.Attributes.disabled (allDisabled || state /= Playing || money < bet) ] [ Html.text "Split" ]
 
           else
             Html.text ""
         , if List.length cards == 2 then
             Html.button
                 [ Html.Events.onClick DoubleDown
-                , Html.Attributes.disabled (bet * 2 > money)
+                , Html.Attributes.disabled (money < bet * 2)
                 ]
                 [ Html.text "Double down" ]
 
@@ -891,8 +912,8 @@ emptyHands =
 
 
 toast : String -> ( Model, Effect ) -> ( Model, Effect )
-toast message ( model, cmd ) =
-    ( { model | toast = Just message }, Multiple [ cmd, ClearToast_ ] )
+toast message ( model, effect ) =
+    ( { model | toast = Just message }, Multiple [ effect, ClearToast_ ] )
 
 
 toastIf : Bool -> String -> ( Model, Effect ) -> ( Model, Effect )

@@ -46,26 +46,117 @@ suite =
                     |> ProgramTest.clickButton "Stand"
                     -- Ensure player won after clicking stand
                     |> ProgramTest.ensureView (playerHasMoney 400)
-                    |> ProgramTest.expectViewHas
-                        [ Selector.exactText "Continue?"
-                        ]
-        , test "test splitting works" <|
-            \_ ->
-                start
-                    (defaultSettings
-                        |> withDeck [ Card Card.Ten Card.Diamonds, Card Card.Ace Card.Diamonds, Card Card.Ten Card.Spades, Card Card.Ace Card.Diamonds ]
-                    )
-                    |> ProgramTest.clickButton "$100"
-                    -- Validate that the user has the expected cards
-                    |> ProgramTest.ensureViewHas
-                        (playerHasCards [ Card Card.Ten Card.Diamonds, Card Card.Ten Card.Spades ])
-                    |> ProgramTest.clickButton "Split"
-                    |> ProgramTest.expectView
-                        (Expect.all
-                            [ playerHasHand 0 [ Card Card.Ten Card.Diamonds ]
-                            , playerHasHand 1 [ Card Card.Ten Card.Spades ]
-                            ]
+                    |> ProgramTest.expectViewHas [ continueButton ]
+        , describe "Splitting"
+            [ test "Allowed if user has cards with equal value and enough funds" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck
+                                [ Card Card.Eight Card.Diamonds
+                                , Card Card.Six Card.Diamonds -- Dealer takes
+                                , Card Card.Eight Card.Spades
+                                , Card Card.Six Card.Diamonds -- Dealer takes
+                                , Card Card.Five Card.Hearts
+                                , Card Card.Two Card.Clubs
+                                , Card Card.Ten Card.Hearts
+                                , Card Card.Ten Card.Diamonds -- Dealer takes and busts (6+6+10 > 21)
+                                ]
                         )
+                        |> ProgramTest.clickButton "$100"
+                        -- Validate that the user has the expected hand
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasBet 0 100
+                                , handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Eight Card.Spades ]
+                                ]
+                            )
+                        |> ProgramTest.clickButton "Split"
+                        -- The first hand will be given another card automatically
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Five Card.Hearts ]
+                                , handHasBet 0 100
+                                , handHasCards 1 [ Card Card.Eight Card.Spades ]
+                                , handHasBet 1 100
+                                ]
+                            )
+                        -- Now the first hand should be selected to hit/stand/double down with
+                        |> ProgramTest.clickButton "Stand"
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Five Card.Hearts ]
+                                , handHasBet 0 100
+                                , handHasCards 1 [ Card Card.Eight Card.Spades, Card Card.Two Card.Clubs ]
+                                , handHasBet 0 100
+                                ]
+                            )
+                        |> ProgramTest.clickButton "Double down"
+                        -- Now the second hand should be selected to hit/stand/double down with
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Five Card.Hearts ]
+                                , handHasCards 1 [ Card Card.Eight Card.Spades, Card Card.Two Card.Clubs, Card Card.Ten Card.Hearts ]
+                                ]
+                            )
+                        |> ProgramTest.ensureView (toastHasMessage "You won $600!")
+                        |> ProgramTest.ensureView (playerHasMoney 600)
+                        |> ProgramTest.expectViewHas [ continueButton ]
+            , test "Splitting and getting black jack (21) does not lock up game" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck
+                                [ Card Card.Ace Card.Diamonds
+                                , Card Card.Six Card.Diamonds -- Dealer takes
+                                , Card Card.Ace Card.Spades
+                                , Card Card.Six Card.Diamonds -- Dealer takes
+                                , Card Card.King Card.Hearts
+                                , Card Card.Nine Card.Clubs
+                                , Card Card.Ten Card.Hearts -- Dealer takes and busts (6+6+10 > 21)
+                                ]
+                        )
+                        |> ProgramTest.clickButton "$100"
+                        -- Validate that the user has the expected hand
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasBet 0 100
+                                , handHasCards 0 [ Card Card.Ace Card.Diamonds, Card Card.Ace Card.Spades ]
+                                ]
+                            )
+                        |> ProgramTest.clickButton "Split"
+                        -- The first hand will be given another card automatically
+                        -- We also get black jack so we should continue to the next hand automatically
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Ace Card.Diamonds, Card Card.King Card.Hearts ]
+                                , handHasBet 0 100
+                                , handHasCards 1 [ Card Card.Ace Card.Spades ]
+                                , handHasBet 1 100
+                                ]
+                            )
+                        |> ProgramTest.ensureView (toastHasMessage "Black Jack!")
+                        |> ProgramTest.advanceTime 1000
+                        -- The second hand is given its second card
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Ace Card.Diamonds, Card Card.King Card.Hearts ]
+                                , handHasBet 0 100
+                                , handHasCards 1 [ Card Card.Ace Card.Spades, Card Card.Nine Card.Clubs ]
+                                , handHasBet 0 100
+                                ]
+                            )
+                        -- Now the second hand should be selected to hit/stand/double down with
+                        |> ProgramTest.clickButton "Stand"
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Ace Card.Diamonds, Card Card.King Card.Hearts ]
+                                , handHasCards 1 [ Card Card.Ace Card.Spades, Card Card.Nine Card.Clubs ]
+                                ]
+                            )
+                        |> ProgramTest.ensureView (playerHasMoney 600)
+                        |> ProgramTest.expectViewHas [ continueButton ]
+            ]
         , test "Can't bet more than you have" <|
             \_ ->
                 start
@@ -99,20 +190,43 @@ suite =
                             ]
                     )
                     |> ProgramTest.clickButton "$100"
-                    |> ProgramTest.ensureView (handHasBet 0 100)
-                    |> ProgramTest.ensureViewHas
-                        (playerHasCards [ Card Card.Five Card.Spades, Card Card.Five Card.Clubs ])
+                    |> ProgramTest.ensureView
+                        (Expect.all
+                            [ handHasCards 0 [ Card Card.Five Card.Spades, Card Card.Five Card.Clubs ]
+                            , handHasBet 0 100
+                            ]
+                        )
                     |> ProgramTest.clickButton "Double down"
-                    |> ProgramTest.ensureView (handHasBet 0 200)
-                    |> ProgramTest.ensureViewHas
-                        (playerHasCards [ Card Card.Five Card.Spades, Card Card.Five Card.Clubs, Card Card.Ten Card.Diamonds ])
                     |> ProgramTest.ensureView
                         (Expect.all
                             [ playerHasMoney 500
                             , handHasBet 0 200
+                            , handHasCards 0 [ Card Card.Five Card.Spades, Card Card.Five Card.Clubs, Card Card.Ten Card.Diamonds ]
                             ]
                         )
-                    |> ProgramTest.expectViewHas [ Selector.exactText "Continue?" ]
+                    |> ProgramTest.expectViewHas [ continueButton ]
+        , test "Bust if more than 21 in value" <|
+            \_ ->
+                start
+                    (defaultSettings
+                        |> withDeck
+                            [ Card Card.Ten Card.Diamonds
+                            , Card Card.Ten Card.Diamonds
+                            , Card Card.Ten Card.Diamonds
+                            , Card Card.Ten Card.Diamonds
+                            , Card Card.Ten Card.Diamonds
+                            , Card Card.Ten Card.Diamonds
+                            ]
+                    )
+                    |> ProgramTest.clickButton "$100"
+                    |> ProgramTest.ensureView
+                        (Expect.all
+                            [ handHasBet 0 100
+                            , handHasCards 0 [ Card Card.Ten Card.Diamonds, Card Card.Ten Card.Diamonds ]
+                            ]
+                        )
+                    |> ProgramTest.clickButton "Hit"
+                    |> ProgramTest.expectView (toastHasMessage "You lost $100!")
         ]
 
 
@@ -144,8 +258,8 @@ playerHands query =
         |> Query.findAll [ Selector.class "hand" ]
 
 
-playerHasHand : Int -> List Card -> Query.Single msg -> Expect.Expectation
-playerHasHand index cards query =
+handHasCards : Int -> List Card -> Query.Single msg -> Expect.Expectation
+handHasCards index cards query =
     query
         |> playerHands
         |> Query.index -index
@@ -164,7 +278,7 @@ playerHasMoney : Int -> Query.Single msg -> Expect.Expectation
 playerHasMoney amount query =
     query
         |> Query.find [ Selector.class "player-money" ]
-        |> Query.has [ Selector.exactText ("$" ++ String.fromInt amount) ]
+        |> Query.has [ Selector.exactText (toDollars amount) ]
 
 
 handHasBet : Int -> Int -> Query.Single msg -> Expect.Expectation
@@ -172,11 +286,28 @@ handHasBet index amount query =
     query
         |> playerHands
         |> Query.index -index
-        |> Query.has [ Selector.exactText ("$" ++ String.fromInt amount) ]
+        |> Query.has [ Selector.exactText (toDollars amount) ]
+
+
+continueButton : Selector.Selector
+continueButton =
+    Selector.exactText "Continue?"
+
+
+toastHasMessage : String -> Query.Single msg -> Expect.Expectation
+toastHasMessage message query =
+    query
+        |> Query.find [ Selector.class "toast" ]
+        |> Query.has [ Selector.exactText message ]
 
 
 
 -- Helpers
+
+
+toDollars : Int -> String
+toDollars amount =
+    "$" ++ String.fromInt amount
 
 
 simulateEffects : Main.Effect -> ProgramTest.SimulatedEffect Main.Msg
@@ -194,6 +325,9 @@ simulateEffects effect =
         Main.DealerTakesCard_ ->
             SimulatedEffect.Process.sleep 0 |> SimulatedEffect.Task.perform (\_ -> Main.DealerTakesCard)
 
+        Main.TakeCard_ ->
+            SimulatedEffect.Process.sleep 0 |> SimulatedEffect.Task.perform (\_ -> Main.TakeCard)
+
         Main.DealerFinish_ ->
             SimulatedEffect.Process.sleep 0 |> SimulatedEffect.Task.perform (\_ -> Main.DealerFinish)
 
@@ -201,7 +335,8 @@ simulateEffects effect =
             SimulatedEffect.Process.sleep 0 |> SimulatedEffect.Task.perform (\_ -> Main.Winnings)
 
         Main.ClearToast_ ->
-            SimulatedEffect.Process.sleep 0 |> SimulatedEffect.Task.perform (\_ -> Main.ClearToast)
+            -- Set 1 here, so we need to manually advance the time to get rid of the toast
+            SimulatedEffect.Process.sleep 1 |> SimulatedEffect.Task.perform (\_ -> Main.ClearToast)
 
         Main.Multiple effects ->
             SimulatedEffect.Cmd.batch (List.map simulateEffects effects)
