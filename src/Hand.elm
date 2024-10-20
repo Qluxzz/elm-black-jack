@@ -12,14 +12,13 @@ type alias Hand =
 value : Hand -> ( Int, Int )
 value cards =
     List.foldl
-        (\card ->
-            \( h1, h2 ) ->
-                case Card.value card of
-                    Card.Single v ->
-                        ( h1 + v, h2 + v )
+        (\card ( h1, h2 ) ->
+            case Card.value card of
+                Card.Single v ->
+                    ( h1 + v, h2 + v )
 
-                    Card.Double v1 v2 ->
-                        ( h1 + v1, h2 + v2 )
+                Card.Double v1 v2 ->
+                    ( h1 + v1, h2 + v2 )
         )
         ( 0, 0 )
         cards

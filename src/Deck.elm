@@ -9,8 +9,8 @@ type alias Deck =
 
 decks : Int -> Deck
 decks amount =
-    List.range 1 amount
-        |> List.foldr (\_ -> \acc -> acc ++ newDeck) []
+    List.repeat amount newDeck
+        |> List.concat
 
 
 suites : List Card.Suit
@@ -26,9 +26,8 @@ values =
 newDeck : Deck
 newDeck =
     List.foldr
-        (\suite ->
-            \acc ->
-                acc ++ List.map (\v -> Card.Card suite v) values
+        (\suite acc ->
+            acc ++ List.map (\v -> Card.Card v suite) values
         )
         []
         suites

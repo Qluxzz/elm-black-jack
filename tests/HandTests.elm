@@ -33,7 +33,7 @@ suite =
 
 createCard : Card.Suit -> Card.Value -> Card.Card
 createCard s v =
-    Card.Card s v
+    Card.Card v s
 
 
 card : Card.Value -> Card.Card

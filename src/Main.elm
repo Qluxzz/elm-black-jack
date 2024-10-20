@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Main exposing (Effect(..), Model, Msg(..), Player, emptyHands, init, initWithDeck, main, update, view)
 
 import Browser
 import Card exposing (Card)
@@ -53,6 +53,48 @@ type Msg
     | Winnings
       -- Toast
     | ClearToast
+    | NoOp
+
+
+type Effect
+    = NoEffect
+    | ShuffleDeck_ Deck.Deck
+      -- Betting
+    | Deal_
+    | DealerTakesCard_
+    | DealerFinish_
+    | Winnings_
+      -- Toast
+    | ClearToast_
+    | Multiple (List Effect)
+
+
+perform : Effect -> Cmd Msg
+perform effect =
+    case effect of
+        NoEffect ->
+            Cmd.none
+
+        ShuffleDeck_ deck ->
+            Random.generate ShuffledDeck (Random.List.shuffle deck)
+
+        Deal_ ->
+            Process.sleep 1000 |> Task.perform (\_ -> Deal)
+
+        DealerTakesCard_ ->
+            Process.sleep 1000 |> Task.perform (\_ -> DealerTakesCard)
+
+        DealerFinish_ ->
+            Process.sleep 1000 |> Task.perform (\_ -> DealerFinish)
+
+        Winnings_ ->
+            Process.sleep 0 |> Task.perform (\_ -> Winnings)
+
+        ClearToast_ ->
+            Process.sleep 2000 |> Task.perform (\_ -> ClearToast)
+
+        Multiple effects ->
+            Cmd.batch (List.map perform effects)
 
 
 type alias Dealer =
@@ -85,14 +127,8 @@ type alias Hand =
 type alias Player =
     { hands : ( Hand, List Hand )
     , money : Int
-    , type_ : PlayerType
     , order : Int
     }
-
-
-type PlayerType
-    = Real
-    | AI -- TODO: Strategies/Personalities
 
 
 type GameState
@@ -109,8 +145,7 @@ initalState =
     { deck = []
     , dealer = []
     , players =
-        ( { type_ = AI
-          , money = 500
+        ( { money = 500
           , hands = emptyHands
           , order = 0
           }
@@ -123,32 +158,27 @@ initalState =
 
 {-| Helper method to start with a deterministic deck
 -}
-initWithDeck : Deck.Deck -> ( Model, Cmd Msg )
+initWithDeck : Deck.Deck -> ( Model, Effect )
 initWithDeck deck =
-    ( { initalState | deck = deck, state = Betting }, Cmd.none )
+    ( { initalState | deck = deck, state = Betting }, NoEffect )
 
 
-init : ( Model, Cmd Msg )
+init : ( Model, Effect )
 init =
-    ( initalState, shuffleDeck (Deck.decks 4) )
-
-
-shuffleDeck : Deck.Deck -> Cmd Msg
-shuffleDeck deck =
-    Random.generate ShuffledDeck (Random.List.shuffle deck)
+    ( initalState, ShuffleDeck_ (Deck.decks 4) )
 
 
 main : Program () Model Msg
 main =
     Browser.element
-        { init = \_ -> init
+        { init = \_ -> init |> Tuple.mapSecond perform
         , view = \model -> view model
-        , update = update
+        , update = \msg model -> update msg model |> Tuple.mapSecond perform
         , subscriptions = \_ -> Sub.none
         }
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Effect )
 update msg model =
     let
         currentPlayer : Player
@@ -164,8 +194,11 @@ update msg model =
             p |> allPlayers |> allHands |> List.all (\h -> cond h)
     in
     case msg of
+        NoOp ->
+            ( model, NoEffect )
+
         ShuffledDeck deck ->
-            ( { model | deck = deck, state = Betting }, Cmd.none )
+            ( { model | deck = deck, state = Betting }, NoEffect )
 
         {- Betting -}
         Bet amount ->
@@ -191,10 +224,10 @@ update msg model =
                         ( updatedPlayer, players )
               }
             , if allHandsHaveBet then
-                Process.sleep 1000 |> Task.perform (\_ -> Deal)
+                Deal_
 
               else
-                Cmd.none
+                NoEffect
             )
 
         {- DEALING -}
@@ -269,16 +302,16 @@ update msg model =
                         model.state
               }
             , if allPlayersHaveOneCard then
-                Process.sleep 1000 |> Task.perform (\_ -> DealerTakesCard)
+                DealerTakesCard_
 
               else if allHandsHaveTwoCards then
-                Process.sleep 1000 |> Task.perform (\_ -> DealerTakesCard)
+                DealerTakesCard_
 
               else if allPlayersStandingOrBusted then
-                Process.sleep 1000 |> Task.perform (\_ -> DealerFinish)
+                DealerFinish_
 
               else
-                Process.sleep 1000 |> Task.perform (\_ -> Deal)
+                Deal_
             )
                 |> toastIf (state == Standing) "Black Jack!"
 
@@ -307,13 +340,13 @@ update msg model =
                 , deck = deck
               }
             , if allPlayersStandingOrBusted then
-                Process.sleep 1000 |> Task.perform (\_ -> DealerFinish)
+                DealerFinish_
 
               else if hasTwoCards then
-                Cmd.none
+                NoEffect
 
               else
-                Process.sleep 1000 |> Task.perform (\_ -> Deal)
+                Deal_
             )
 
         {- Hit or Stand -}
@@ -374,10 +407,10 @@ update msg model =
                         model.state
               }
             , if allPlayersStandingOrBusted then
-                Process.sleep 1000 |> Task.perform (\_ -> DealerFinish)
+                DealerFinish_
 
               else
-                Cmd.none
+                NoEffect
             )
                 |> toastIf (state == Standing) "Black Jack!"
                 |> toastIf (state == Busted) "Bust!"
@@ -405,10 +438,10 @@ update msg model =
                         model.state
               }
             , if allPlayersStandingOrBusted then
-                Process.sleep 1000 |> Task.perform (\_ -> DealerFinish)
+                DealerFinish_
 
               else
-                Cmd.none
+                NoEffect
             )
 
         -- Split current hand into two, allow player to take a card/stand/split/doubledown on each hand
@@ -434,7 +467,7 @@ update msg model =
                         , hands = newHands
                     }
             in
-            ( { model | players = ( updatedPlayer, players ) }, Cmd.none )
+            ( { model | players = ( updatedPlayer, players ) }, NoEffect )
 
         -- Double bet and take another card
         DoubleDown ->
@@ -482,10 +515,10 @@ update msg model =
                         model.state
               }
             , if allPlayersStandingOrBusted then
-                Process.sleep 1000 |> Task.perform (\_ -> DealerFinish)
+                DealerFinish_
 
               else
-                Cmd.none
+                NoEffect
             )
 
         -- All players are now finished
@@ -501,14 +534,14 @@ update msg model =
                     lowestDealerHandValue > 21
             in
             if dealerHasReachedLimit || dealerHasBust then
-                ( { model | state = Result }, Process.sleep 0 |> Task.perform (\_ -> Winnings) )
+                ( { model | state = Result }, Winnings_ )
 
             else
                 let
                     ( cards, deck ) =
                         Deck.takeCard model.deck
                 in
-                ( { model | dealer = model.dealer ++ cards, deck = deck }, Process.sleep 1000 |> Task.perform (\_ -> DealerFinish) )
+                ( { model | dealer = model.dealer ++ cards, deck = deck }, DealerFinish_ )
 
         -- Dealer has busted or reached 17 now
         Winnings ->
@@ -525,7 +558,7 @@ update msg model =
                     , List.map (\p -> { p | money = p.money + calculateWinnings dealerHandValue p }) players
                     )
             in
-            ( { model | players = updatedPlayers }, Cmd.none )
+            ( { model | players = updatedPlayers }, NoEffect )
                 |> toast
                     (if win == 0 then
                         "You lost $" ++ String.fromInt (currentPlayer.hands |> playerHands |> List.map .bet |> List.sum) ++ "!"
@@ -542,10 +575,10 @@ update msg model =
                 newState =
                     initalState
             in
-            ( { newState | state = Betting, deck = model.deck, players = cleared }, Cmd.none )
+            ( { newState | state = Betting, deck = model.deck, players = cleared }, NoEffect )
 
         ClearToast ->
-            ( { model | toast = Nothing }, Cmd.none )
+            ( { model | toast = Nothing }, NoEffect )
 
 
 
@@ -579,7 +612,7 @@ view model =
 
 cardView : Bool -> Card -> Html.Html msg
 cardView hidden card =
-    Html.div [ Html.Attributes.class "card" ]
+    Html.div [ Html.Attributes.class "card", Html.Attributes.attribute "test-id" (Card.toString card) ]
         [ Html.div [ Html.Attributes.class "card-inner", Html.Attributes.classList [ ( "hidden", hidden ) ] ]
             [ Html.div [ Html.Attributes.class "color", Html.Attributes.class (Card.suiteToCssClass card) ] []
             , Html.div [ Html.Attributes.class "value", Html.Attributes.class (Card.valueToCssClass card) ] []
@@ -619,18 +652,20 @@ playerView player =
         ( activeHand, otherHands ) =
             player.hands
     in
-    Html.div [ Html.Attributes.class "hands" ]
-        ((activeHand :: otherHands)
-            |> List.sortBy .order
-            |> List.map
-                (\hand ->
-                    if hand.order == activeHand.order then
-                        activeHandView hand
+    Html.div [ Html.Attributes.class "player" ]
+        [ Html.div [ Html.Attributes.class "hands" ]
+            ((activeHand :: otherHands)
+                |> List.sortBy .order
+                |> List.map
+                    (\hand ->
+                        if hand.order == activeHand.order then
+                            activeHandView hand
 
-                    else
-                        inactiveHandView hand
-                )
-        )
+                        else
+                            inactiveHandView hand
+                    )
+            )
+        ]
 
 
 inactiveHandView : Hand -> Html.Html msg
@@ -659,7 +694,7 @@ handView attributes { cards, state, bet } =
 actionsView : GameState -> Player -> Html.Html Msg
 actionsView state player =
     Html.div [ Html.Attributes.class "actions" ]
-        [ Html.p [] [ Html.text ("$" ++ String.fromInt player.money) ]
+        [ Html.p [ Html.Attributes.class "player-money" ] [ Html.text ("$" ++ String.fromInt player.money) ]
         , case state of
             Betting ->
                 bettingView player
@@ -719,7 +754,7 @@ hitOrStandView { money, hands } =
             hands
     in
     Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
-        [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Take a card" ]
+        [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Hit" ]
         , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled (state /= Playing) ] [ Html.text "Stand" ]
         , if canSplit cards then
             Html.button [ Html.Events.onClick Split, Html.Attributes.disabled (state /= Playing || money < bet) ] [ Html.text "Split" ]
@@ -819,41 +854,35 @@ nextHand ( currentHand, rest ) =
 calculateWinnings : Int -> Player -> Int
 calculateWinnings dealerHand { hands } =
     List.foldr
-        (\{ cards, bet, state } ->
-            \acc ->
-                if state == Busted then
-                    -- You busted, no win
-                    acc
+        (\{ cards, bet, state } acc ->
+            if state == Busted then
+                -- You busted, no win
+                acc
 
-                else if dealerHand > 21 then
-                    -- Dealer busted, automatic win
-                    acc + bet * 2
+            else if dealerHand > 21 then
+                -- Dealer busted, automatic win
+                acc + bet * 2
 
-                else if Hand.largestValue cards == 21 then
-                    -- Black Jack, pays 3 to 2
-                    acc + bet * 3
+            else if Hand.largestValue cards == 21 then
+                -- Black Jack, pays 3 to 2
+                acc + bet * 3
 
-                else
-                    case Basics.compare (Hand.largestValue cards) dealerHand of
-                        GT ->
-                            -- You won over the dealer, you get 2x your bet back
-                            acc + bet * 2
+            else
+                case Basics.compare (Hand.largestValue cards) dealerHand of
+                    GT ->
+                        -- You won over the dealer, you get 2x your bet back
+                        acc + bet * 2
 
-                        EQ ->
-                            -- Push, you get your inital bet back
-                            acc + bet
+                    EQ ->
+                        -- Push, you get your inital bet back
+                        acc + bet
 
-                        LT ->
-                            -- You lost to the dealer
-                            acc
+                    LT ->
+                        -- You lost to the dealer
+                        acc
         )
         0
         (playerHands hands)
-
-
-clearAlert : Cmd Msg
-clearAlert =
-    Process.sleep 2000 |> Task.perform (\_ -> ClearToast)
 
 
 emptyHands : ( Hand, List Hand )
@@ -861,12 +890,12 @@ emptyHands =
     ( { cards = [], bet = 0, state = Playing, order = 0 }, [] )
 
 
-toast : String -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+toast : String -> ( Model, Effect ) -> ( Model, Effect )
 toast message ( model, cmd ) =
-    ( { model | toast = Just message }, Cmd.batch [ cmd, clearAlert ] )
+    ( { model | toast = Just message }, Multiple [ cmd, ClearToast_ ] )
 
 
-toastIf : Bool -> String -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+toastIf : Bool -> String -> ( Model, Effect ) -> ( Model, Effect )
 toastIf cond message =
     if cond then
         toast message

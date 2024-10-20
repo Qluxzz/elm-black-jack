@@ -25,8 +25,8 @@ type Value
 
 
 type alias Card =
-    { suite : Suit
-    , value : Value
+    { value : Value
+    , suite : Suit
     }
 
 
