@@ -175,19 +175,7 @@ init =
 main : Program () Model Msg
 main =
     Browser.element
-        { init =
-            \_ ->
-                initWithDeck
-                    [ Card Card.Eight Card.Diamonds
-                    , Card Card.Six Card.Diamonds -- Dealer takes
-                    , Card Card.Eight Card.Spades
-                    , Card Card.Six Card.Diamonds -- Dealer takes
-                    , Card Card.Ten Card.Hearts
-                    , Card Card.Two Card.Clubs
-                    , Card Card.Ten Card.Hearts
-                    , Card Card.Ten Card.Diamonds -- Dealer takes and busts (6+6+10 > 21)
-                    ]
-                    |> Tuple.mapSecond perform
+        { init = \_ -> init |> Tuple.mapSecond perform
         , view = \model -> view model
         , update = \msg model -> update msg model |> Tuple.mapSecond perform
         , subscriptions = \_ -> Sub.none
