@@ -371,6 +371,10 @@ body>div {
     content: '10';
 }
 
+.ten::after {
+    right: 7px;
+}
+
 .jack::before,
 .jack::after {
     content: 'J';
@@ -401,6 +405,11 @@ body>div {
     font-weight: bold;
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
     cursor: pointer;
+    opacity: 0.8;
+
+    &:hover {
+        opacity: 1;
+    }
 
     &._1 {
         background-color: white;
