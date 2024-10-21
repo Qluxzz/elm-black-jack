@@ -92,6 +92,9 @@ body>div {
 
 .hand {
     padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 
     &.active {
         background-color: rgba(0, 0, 0, 0.3);
