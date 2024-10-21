@@ -547,7 +547,7 @@ update msg model =
                                             , cards = h.cards ++ cards
                                         }
                                     )
-                        , money = currentPlayer.money - (currentBet * 2)
+                        , money = currentPlayer.money - currentBet
                     }
 
                 updatedPlayers =
@@ -585,14 +585,14 @@ update msg model =
         -- All players are now finished
         DealerFinish ->
             let
-                lowestDealerHandValue =
+                dealerHandValue =
                     model.dealer |> Hand.largestValue
 
                 dealerHasReachedLimit =
-                    lowestDealerHandValue >= 17
+                    dealerHandValue >= 17
 
                 dealerHasBust =
-                    lowestDealerHandValue > 21
+                    dealerHandValue > 21
             in
             if dealerHasReachedLimit || dealerHasBust then
                 ( { model | state = Result }, Winnings_ )
@@ -632,7 +632,13 @@ update msg model =
                 newState =
                     initalState
             in
-            ( { newState | state = Betting, deck = model.deck, players = cleared }, NoEffect )
+            ( { newState | state = Betting, deck = model.deck, players = cleared }
+            , if List.length model.deck < 15 then
+                ShuffleDeck_ model.deck
+
+              else
+                NoEffect
+            )
 
         ClearToast ->
             ( { model | toast = Nothing }, NoEffect )
@@ -825,7 +831,7 @@ hitOrStandView { money, hands } =
         , if List.length cards == 2 then
             Html.button
                 [ Html.Events.onClick DoubleDown
-                , Html.Attributes.disabled (money < bet * 2)
+                , Html.Attributes.disabled (money < bet)
                 ]
                 [ Html.text "Double down" ]
 

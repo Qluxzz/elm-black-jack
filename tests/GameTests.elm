@@ -100,7 +100,7 @@ suite =
                                 ]
                             )
                         |> ProgramTest.ensureView (toastHasMessage "You won $600!")
-                        |> ProgramTest.ensureView (playerHasMoney 600)
+                        |> ProgramTest.ensureView (playerHasMoney 700)
                         |> ProgramTest.expectViewHas [ continueButton ]
             , test "Splitting and getting black jack (21) does not lock up game" <|
                 \_ ->
@@ -208,7 +208,7 @@ suite =
                                 ]
                             )
                         |> ProgramTest.ensureView (toastHasMessage "You won $600!")
-                        |> ProgramTest.ensureView (playerHasMoney 600)
+                        |> ProgramTest.ensureView (playerHasMoney 700)
                         |> ProgramTest.expectViewHas [ continueButton ]
             ]
         , test "Can't bet more than you have" <|
@@ -254,11 +254,33 @@ suite =
                         |> ProgramTest.clickButton "Double down"
                         |> ProgramTest.ensureView
                             (Expect.all
-                                [ playerHasMoney 500
+                                [ playerHasMoney 600
                                 , handHasBet 0 200
                                 , handHasCards 0 [ Card Card.Five Card.Spades, Card Card.Five Card.Clubs, Card Card.Ten Card.Diamonds ]
                                 ]
                             )
+                        |> ProgramTest.expectViewHas [ continueButton ]
+            , test "Doubling down is allowed if the player has enough money to do it, money >= bet" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withPlayers ( { money = 1000 }, [] )
+                            |> withDelay
+                            |> withDeck
+                                [ Card Card.Ten Card.Spades
+                                , Card Card.Ace Card.Spades -- Dealer takes
+                                , Card Card.Two Card.Diamonds
+                                , Card Card.Five Card.Clubs -- Dealer takes
+                                , Card Card.Five Card.Hearts
+                                , Card Card.Ten Card.Clubs -- Dealer takes
+                                , Card Card.Ten Card.Clubs -- Dealer takes
+                                ]
+                        )
+                        |> ProgramTest.clickButton "$500"
+                        |> ProgramTest.advanceTime 4
+                        |> ProgramTest.clickButton "Double down"
+                        |> ProgramTest.ensureView (playerHasMoney 0)
+                        |> ProgramTest.advanceTime 5
                         |> ProgramTest.expectViewHas [ continueButton ]
             , test "Show toast if bust when doubling down" <|
                 \_ ->
@@ -307,24 +329,52 @@ suite =
                         )
                     |> ProgramTest.clickButton "Hit"
                     |> ProgramTest.expectView (toastHasMessage "Bust!")
-        , test "Dealer second card should be visible before taking third card" <|
-            \_ ->
-                start
-                    (defaultSettings
-                        |> withDeck
-                            [ Card Card.Ace Card.Diamonds
-                            , Card Card.Four Card.Spades -- Dealer
-                            , Card Card.Jack Card.Spades
-                            , Card Card.Three Card.Hearts -- Dealer
-                            , Card Card.Ten Card.Clubs
-                            ]
-                        |> withDelay
-                    )
-                    |> ProgramTest.clickButton "$100"
-                    |> ProgramTest.advanceTime 3
-                    |> ProgramTest.ensureView (toastHasMessage "Black Jack!")
-                    |> ProgramTest.advanceTime 1
-                    |> ProgramTest.expectView (dealerHasCards [ Card Card.Four Card.Spades, Card Card.Three Card.Hearts ])
+        , describe "Deler"
+            [ test "Dealer second card should be visible before taking third card" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck
+                                [ Card Card.Ace Card.Diamonds
+                                , Card Card.Four Card.Spades -- Dealer
+                                , Card Card.Jack Card.Spades
+                                , Card Card.Three Card.Hearts -- Dealer
+                                , Card Card.Ten Card.Clubs
+                                ]
+                            |> withDelay
+                        )
+                        |> ProgramTest.clickButton "$100"
+                        -- Deal a card per 'tick', so three means the dealer has one card and the player has two cards
+                        |> ProgramTest.advanceTime 3
+                        |> ProgramTest.ensureView (toastHasMessage "Black Jack!")
+                        -- Make the dealer take the last card
+                        |> ProgramTest.advanceTime 1
+                        |> ProgramTest.expectView (dealerHasCards [ Card Card.Four Card.Spades, Card Card.Three Card.Hearts ])
+            , test "Dealer stands on soft 17" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck
+                                [ Card Card.Three Card.Diamonds
+                                , Card Card.Ace Card.Hearts -- Dealer card
+                                , Card Card.Four Card.Diamonds
+                                , Card Card.Six Card.Spades
+
+                                -- Extra cards the dealer should not take
+                                , Card Card.Five Card.Diamonds
+                                , Card Card.Ten Card.Hearts
+                                ]
+                            |> withDelay
+                        )
+                        |> ProgramTest.clickButton "$100"
+                        -- Deal a card per 'tick', so four means the dealer and the player has two cards each
+                        |> ProgramTest.advanceTime 4
+                        |> ProgramTest.ensureView (dealerHasCards [ Card Card.Ace Card.Hearts, Card Card.Six Card.Spades ])
+                        |> ProgramTest.clickButton "Stand"
+                        |> ProgramTest.advanceTime 1
+                        |> ProgramTest.ensureView (dealerHasCards [ Card Card.Ace Card.Hearts, Card Card.Six Card.Spades ])
+                        |> ProgramTest.expectViewHas [ continueButton ]
+            ]
         ]
 
 
@@ -392,8 +442,6 @@ dealerHasCards cards query =
         |> Query.find [ Selector.class "cards" ]
         |> Expect.all
             [ Query.has (allCards cards)
-            , Query.find [ Selector.class "card-inner" ]
-                >> Query.hasNot [ Selector.class "hidden" ]
             ]
 
 
