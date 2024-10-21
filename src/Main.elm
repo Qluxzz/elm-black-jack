@@ -365,7 +365,10 @@ update msg model =
             ( { model
                 | dealer = updatedHand
                 , state =
-                    if hasTwoCards then
+                    if allPlayersStandingOrBusted then
+                        DealerFinishes
+
+                    else if hasTwoCards then
                         HitOrStand
 
                     else

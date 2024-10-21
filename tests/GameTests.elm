@@ -419,7 +419,6 @@ suite =
                         |> ProgramTest.clickButton "$100"
                         -- Deal a card per 'tick', so four means the dealer and the player has two cards each
                         |> ProgramTest.advanceTime 4
-                        |> ProgramTest.ensureView (dealerHasCards [ Card Card.Ace Card.Hearts, Card Card.Six Card.Spades ])
                         |> ProgramTest.clickButton "Stand"
                         |> ProgramTest.advanceTime 1
                         |> ProgramTest.ensureView (dealerHasCards [ Card Card.Ace Card.Hearts, Card Card.Six Card.Spades ])
@@ -492,6 +491,7 @@ dealerHasCards cards query =
         |> Query.find [ Selector.class "cards" ]
         |> Expect.all
             [ Query.has (allCards cards)
+            , Query.hasNot [ Selector.class "hidden" ]
             ]
 
 
