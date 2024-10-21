@@ -210,6 +210,56 @@ suite =
                         |> ProgramTest.ensureView (toastHasMessage "You won $600!")
                         |> ProgramTest.ensureView (playerHasMoney 700)
                         |> ProgramTest.expectViewHas [ continueButton ]
+            , test "Splitting hands keeps the hands in the expected order" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck
+                                [ Card Card.Eight Card.Diamonds -- Player gets
+                                , Card Card.Two Card.Clubs -- Dealer takes
+                                , Card Card.Eight Card.Hearts -- Player gets
+                                , Card Card.Two Card.Hearts -- Dealer takes
+                                , Card Card.Eight Card.Spades -- Player splits, get on first hand
+                                , Card Card.Five Card.Clubs -- Player splits again, get on first hand
+                                , Card Card.Eight Card.Spades -- Player splits second hand
+                                , Card Card.Ten Card.Diamonds -- Player gets second card on second hand
+                                ]
+                        )
+                        |> ProgramTest.clickButton "$100"
+                        |> ProgramTest.ensureView
+                            (handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Eight Card.Hearts ])
+                        |> ProgramTest.clickButton "Split"
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Eight Card.Spades ]
+                                , handHasCards 1 [ Card Card.Eight Card.Hearts ]
+                                ]
+                            )
+                        |> ProgramTest.clickButton "Split"
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Five Card.Clubs ]
+                                , handHasCards 1 [ Card Card.Eight Card.Spades ]
+                                , handHasCards 2 [ Card Card.Eight Card.Hearts ]
+                                ]
+                            )
+                        |> ProgramTest.clickButton "Stand"
+                        |> ProgramTest.ensureView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Five Card.Clubs ]
+                                , handHasCards 1 [ Card Card.Eight Card.Spades, Card Card.Eight Card.Spades ]
+                                , handHasCards 2 [ Card Card.Eight Card.Hearts ]
+                                ]
+                            )
+                        |> ProgramTest.clickButton "Split"
+                        |> ProgramTest.expectView
+                            (Expect.all
+                                [ handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Five Card.Clubs ]
+                                , handHasCards 1 [ Card Card.Eight Card.Spades, Card Card.Ten Card.Diamonds ]
+                                , handHasCards 2 [ Card Card.Eight Card.Spades ]
+                                , handHasCards 3 [ Card Card.Eight Card.Hearts ]
+                                ]
+                            )
             ]
         , test "Can't bet more than you have" <|
             \_ ->
@@ -404,7 +454,7 @@ handHasCards : Int -> List Card -> Query.Single msg -> Expect.Expectation
 handHasCards index cards query =
     query
         |> playerHands
-        |> Query.index -index
+        |> Query.index index
         |> Query.has (allCards cards)
 
 

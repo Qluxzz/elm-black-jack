@@ -488,7 +488,7 @@ update msg model =
                 NoEffect
             )
 
-        -- Split current hand into two, allow player to take a card/stand/split/doubledown on each hand
+        -- Split current hand into two, allow player to take a card/stand/split/double down on each hand
         Split ->
             let
                 ( currentHand, rest ) =
@@ -498,8 +498,20 @@ update msg model =
                 newHands =
                     case currentHand.cards of
                         [ first, second ] ->
-                            ( { cards = [ first ], bet = currentHand.bet, state = Playing, order = 0 }
-                            , { cards = [ second ], bet = currentHand.bet, state = Playing, order = List.length rest + 1 } :: rest
+                            ( { cards = [ first ], bet = currentHand.bet, state = Playing, order = currentHand.order }
+                              -- The new hand should always have the order after the current hand
+                            , { cards = [ second ], bet = currentHand.bet, state = Playing, order = currentHand.order + 1 }
+                                :: List.map
+                                    (\h ->
+                                        -- The order can loop around
+                                        -- So as long as the hand's order is higher than the current hand's order we need to increase its order
+                                        if h.order > currentHand.order then
+                                            { h | order = h.order + 1 }
+
+                                        else
+                                            h
+                                    )
+                                    rest
                             )
 
                         _ ->
