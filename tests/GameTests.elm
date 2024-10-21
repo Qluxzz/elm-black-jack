@@ -294,8 +294,11 @@ suite =
                             , Card Card.Ten Card.Diamonds
                             , Card Card.Ten Card.Diamonds
                             ]
+                        |> withDelay
                     )
                     |> ProgramTest.clickButton "$100"
+                    -- Deal a card per 'tick', so four means the dealer and the player has two cards each
+                    |> ProgramTest.advanceTime 4
                     |> ProgramTest.ensureView
                         (Expect.all
                             [ handHasBet 0 100
@@ -303,9 +306,7 @@ suite =
                             ]
                         )
                     |> ProgramTest.clickButton "Hit"
-                    -- TODO: We're setting multiple toasts here, first one for that we have busted,
-                    -- and then directly after one that we lost, should we support multiple toasts that stack or add a delay for the toasts?
-                    |> ProgramTest.expectView (toastHasMessage "You lost $100!")
+                    |> ProgramTest.expectView (toastHasMessage "Bust!")
         , test "Dealer second card should be visible before taking third card" <|
             \_ ->
                 start
