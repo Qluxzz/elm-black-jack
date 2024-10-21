@@ -675,12 +675,7 @@ view model =
             [ Html.text "" ]
          )
             ++ [ actionsView model.state currentPlayer
-               , case model.toast of
-                    Just message ->
-                        toastView message
-
-                    Nothing ->
-                        Html.text ""
+               , Maybe.map toastView model.toast |> Maybe.withDefault (Html.text "")
                ]
         )
 
@@ -733,11 +728,13 @@ playerView player =
                 |> List.sortBy .order
                 |> List.map
                     (\hand ->
-                        if hand.order == activeHand.order then
-                            activeHandView hand
+                        (if hand.order == activeHand.order then
+                            activeHandView
 
-                        else
-                            inactiveHandView hand
+                         else
+                            inactiveHandView
+                        )
+                            hand
                     )
             )
         ]
@@ -750,19 +747,21 @@ inactiveHandView =
 
 activeHandView : Hand -> Html.Html Msg
 activeHandView ({ state } as hand) =
-    handView [ Html.Attributes.classList [ ( "active", state == Playing ) ] ] hand
+    handView
+        [ Html.Attributes.classList
+            [ ( "active", state == Playing )
+            , ( "busted", state == Busted )
+            ]
+        ]
+        hand
 
 
 handView : List (Html.Attribute msg) -> Hand -> Html.Html msg
-handView attributes { cards, state, bet } =
-    Html.div ([ Html.Attributes.class "hand", Html.Attributes.classList [ ( "busted", state == Busted ) ] ] ++ attributes)
-        [ Html.div []
-            [ Html.div [ Html.Attributes.class "cards" ]
-                (List.map (cardView False) cards)
-            , Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "justify-content" "space-between" ]
-                [ Html.p [] [ Html.text ("$" ++ String.fromInt bet) ]
-                ]
-            ]
+handView attributes { cards, bet } =
+    Html.div (Html.Attributes.class "hand" :: attributes)
+        [ Html.div [ Html.Attributes.class "cards" ]
+            (List.map (cardView False) cards)
+        , Html.p [] [ Html.text ("$" ++ String.fromInt bet) ]
         ]
 
 
