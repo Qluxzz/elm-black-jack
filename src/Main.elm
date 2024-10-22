@@ -216,17 +216,8 @@ main =
 update : Msg -> Model -> ( Model, Effect )
 update msg model =
     let
-        currentPlayer : Player
-        currentPlayer =
-            Tuple.first model.players
-
-        players : List Player
-        players =
-            Tuple.second model.players
-
-        allPlayersHaveCond : ( Player, List Player ) -> (Hand -> Bool) -> Bool
-        allPlayersHaveCond p cond =
-            p |> allPlayers |> allHands |> List.all (\h -> cond h)
+        ( currentPlayer, players ) =
+            model.players
     in
     case msg of
         NoOp ->
@@ -242,7 +233,7 @@ update msg model =
                     { currentPlayer | money = currentPlayer.money - amount, hands = updateCurrentHand currentPlayer.hands (\h -> { h | bet = amount }) }
 
                 allHandsHaveBet =
-                    allHandsHaveCond updatedPlayer (\h -> h.bet /= 0)
+                    allPlayersHaveCond (\h -> h.bet /= 0) ( updatedPlayer, players )
             in
             ( { model
                 | state =
@@ -315,14 +306,8 @@ update msg model =
                     else
                         ( updatedPlayer, players )
 
-                allPlayersHaveOneCard =
-                    allPlayersHaveCond updatedPlayers (\h -> List.length h.cards == 1)
-
                 allHandsHaveTwoCards =
-                    allPlayersHaveCond updatedPlayers (\h -> List.length h.cards == 2)
-
-                allPlayersStandingOrBusted =
-                    allPlayersHaveCond updatedPlayers (\h -> List.member h.state [ Standing, Busted ])
+                    allPlayersHaveCond (\h -> List.length h.cards == 2) updatedPlayers
             in
             ( { model
                 | deck = deck
@@ -334,13 +319,13 @@ update msg model =
                     else
                         model.state
               }
-            , if allPlayersHaveOneCard then
+            , if allHandsHaveTwoCards then
                 DealerTakesCard_
 
-              else if allHandsHaveTwoCards then
+              else if allPlayersHaveCond (\h -> List.length h.cards == 1) updatedPlayers then
                 DealerTakesCard_
 
-              else if allPlayersStandingOrBusted then
+              else if allPlayersStandingOrBusted updatedPlayers then
                 DealerFinish_
 
               else
@@ -359,13 +344,13 @@ update msg model =
                 hasTwoCards =
                     List.length updatedHand == 2
 
-                allPlayersStandingOrBusted =
-                    allPlayersHaveCond model.players (\h -> List.member h.state [ Standing, Busted ])
+                allPlayersStandingOrBusted_ =
+                    allPlayersStandingOrBusted model.players
             in
             ( { model
                 | dealer = updatedHand
                 , state =
-                    if allPlayersStandingOrBusted then
+                    if allPlayersStandingOrBusted_ then
                         DealerFinishes
 
                     else if hasTwoCards then
@@ -375,7 +360,7 @@ update msg model =
                         model.state
                 , deck = deck
               }
-            , if allPlayersStandingOrBusted then
+            , if allPlayersStandingOrBusted_ then
                 DealerFinish_
 
               else if hasTwoCards then
@@ -425,8 +410,8 @@ update msg model =
                 updatedPlayers =
                     ( updatedPlayer, players )
 
-                allPlayersStandingOrBusted =
-                    allPlayersHaveCond updatedPlayers (\h -> List.member h.state [ Standing, Busted ])
+                allPlayersStandingOrBusted_ =
+                    allPlayersStandingOrBusted updatedPlayers
 
                 nextHandHasTwoCards =
                     updatedPlayer.hands |> Tuple.first |> (\h -> List.length h.cards >= 2)
@@ -435,13 +420,13 @@ update msg model =
                 | deck = deck
                 , players = updatedPlayers
                 , state =
-                    if allPlayersStandingOrBusted then
+                    if allPlayersStandingOrBusted_ then
                         DealerFinishes
 
                     else
                         model.state
               }
-            , if allPlayersStandingOrBusted then
+            , if allPlayersStandingOrBusted_ then
                 DealerFinish_
 
               else if not nextHandHasTwoCards then
@@ -469,19 +454,19 @@ update msg model =
                 updatedPlayers =
                     ( updatedPlayer, players )
 
-                allPlayersStandingOrBusted =
-                    allPlayersHaveCond updatedPlayers (\h -> List.member h.state [ Standing, Busted ])
+                allPlayersStandingOrBusted_ =
+                    allPlayersStandingOrBusted updatedPlayers
             in
             ( { model
                 | players = ( updatedPlayer, Tuple.second model.players )
                 , state =
-                    if allPlayersStandingOrBusted then
+                    if allPlayersStandingOrBusted_ then
                         DealerFinishes
 
                     else
                         model.state
               }
-            , if allPlayersStandingOrBusted then
+            , if allPlayersStandingOrBusted_ then
                 DealerFinish_
 
               else if not nextHandHasTwoCards then
@@ -568,8 +553,8 @@ update msg model =
                 updatedPlayers =
                     ( updatedPlayer, players )
 
-                allPlayersStandingOrBusted =
-                    allPlayersHaveCond updatedPlayers (\h -> List.member h.state [ Standing, Busted ])
+                allPlayersStandingOrBusted_ =
+                    allPlayersStandingOrBusted updatedPlayers
 
                 nextHandHasTwoCards =
                     updatedPlayer.hands
@@ -580,13 +565,13 @@ update msg model =
                 | players = updatedPlayers
                 , deck = deck
                 , state =
-                    if allPlayersStandingOrBusted then
+                    if allPlayersStandingOrBusted_ then
                         DealerFinishes
 
                     else
                         model.state
               }
-            , if allPlayersStandingOrBusted then
+            , if allPlayersStandingOrBusted_ then
                 DealerFinish_
 
               else if not nextHandHasTwoCards then
@@ -859,23 +844,24 @@ allPlayers ( currentPlayer, rest ) =
     currentPlayer :: rest
 
 
+playerHands : ( Hand, List Hand ) -> List Hand
+playerHands ( currentHand, rest ) =
+    currentHand :: rest
+
+
 allHands : List Player -> List Hand
 allHands =
     List.concatMap (.hands >> playerHands)
 
 
-allHandsHaveCond : Player -> (Hand -> Bool) -> Bool
-allHandsHaveCond player cond =
-    let
-        ( currentHand, rest ) =
-            player.hands
-    in
-    cond currentHand || List.all cond rest
+allPlayersHaveCond : (Hand -> Bool) -> ( Player, List Player ) -> Bool
+allPlayersHaveCond cond =
+    allPlayers >> allHands >> List.all cond
 
 
-playerHands : ( Hand, List Hand ) -> List Hand
-playerHands ( currentHand, rest ) =
-    currentHand :: rest
+allPlayersStandingOrBusted : ( Player, List Player ) -> Bool
+allPlayersStandingOrBusted =
+    allPlayersHaveCond (\h -> List.member h.state [ Standing, Busted ])
 
 
 updateCurrentHand :
