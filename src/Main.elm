@@ -695,27 +695,16 @@ cardView hidden card =
 
 dealerView : Dealer -> GameState -> Html.Html Msg
 dealerView dealer state =
+    let
+        hideSecondCard =
+            not <| List.member state [ DealerFinishes, Result ]
+    in
     Html.div [ Html.Attributes.class "dealer" ]
-        [ if List.member state [ DealerFinishes, Result ] then
-            Html.div [ Html.Attributes.class "cards" ] (List.map (cardView False) dealer)
-
-          else
-            case dealer of
-                first :: [] ->
-                    Html.div [ Html.Attributes.class "cards" ]
-                        [ cardView False first
-                        ]
-
-                first :: second :: rest ->
-                    Html.div [ Html.Attributes.class "cards" ]
-                        ([ cardView False first
-                         , cardView (state /= Result) second
-                         ]
-                            ++ List.map (cardView False) rest
-                        )
-
-                [] ->
-                    Html.text ""
+        [ Html.div [ Html.Attributes.class "cards" ]
+            (List.indexedMap
+                (\i -> cardView (i == 1 && hideSecondCard))
+                dealer
+            )
         ]
 
 
