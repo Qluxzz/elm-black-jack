@@ -230,7 +230,9 @@ update msg model =
         Bet amount ->
             let
                 updatedPlayer =
-                    { currentPlayer | money = currentPlayer.money - amount, hands = updateCurrentHand currentPlayer.hands (\h -> { h | bet = amount }) }
+                    currentPlayer
+                        |> updatePlayer (\p -> { p | money = p.money - amount })
+                        |> updateCurrentHand (\h -> { h | bet = amount })
 
                 allHandsHaveBet =
                     allPlayersHaveCond (\h -> h.bet /= 0) ( updatedPlayer, players )
@@ -242,12 +244,7 @@ update msg model =
 
                     else
                         model.state
-                , players =
-                    if allHandsHaveBet then
-                        next ( updatedPlayer, players )
-
-                    else
-                        ( updatedPlayer, players )
+                , players = switchToNextPlayerIf allHandsHaveBet ( updatedPlayer, players )
               }
             , if allHandsHaveBet then
                 Deal_
@@ -262,35 +259,10 @@ update msg model =
                 ( cards, deck ) =
                     Deck.takeCard model.deck
 
-                ( currentHand, rest ) =
-                    currentPlayer.hands
-
-                updatedCards =
-                    currentHand.cards ++ cards
-
-                state =
-                    case Basics.compare (Hand.largestValue updatedCards) 21 of
-                        GT ->
-                            Busted
-
-                        EQ ->
-                            Standing
-
-                        LT ->
-                            Playing
-
-                updatedCurrentHand =
-                    { currentHand | cards = updatedCards, state = state }
-
                 updatedPlayer =
-                    { currentPlayer
-                        | hands =
-                            if state == Busted then
-                                next ( updatedCurrentHand, rest )
-
-                            else
-                                ( updatedCurrentHand, rest )
-                    }
+                    currentPlayer
+                        |> addCards cards
+                        |> switchToNextHandIf (\h -> h.state == Busted)
 
                 currentHandHasTwoCards =
                     currentPlayer.hands
@@ -300,11 +272,7 @@ update msg model =
                            )
 
                 updatedPlayers =
-                    if currentHandHasTwoCards then
-                        next ( updatedPlayer, players )
-
-                    else
-                        ( updatedPlayer, players )
+                    switchToNextPlayerIf currentHandHasTwoCards ( updatedPlayer, players )
 
                 allHandsHaveTwoCards =
                     allPlayersHaveCond (\h -> List.length h.cards == 2) updatedPlayers
@@ -331,7 +299,6 @@ update msg model =
               else
                 Deal_
             )
-                |> toastIf (state == Standing) "Black Jack!"
 
         DealerTakesCard ->
             let
@@ -377,35 +344,10 @@ update msg model =
                 ( cards, deck ) =
                     Deck.takeCard model.deck
 
-                ( currentHand, rest ) =
-                    currentPlayer.hands
-
-                updatedCards =
-                    currentHand.cards ++ cards
-
-                state =
-                    case Basics.compare (Hand.largestValue updatedCards) 21 of
-                        GT ->
-                            Busted
-
-                        EQ ->
-                            Standing
-
-                        LT ->
-                            Playing
-
-                updatedCurrentHand =
-                    { currentHand | cards = updatedCards, state = state }
-
                 updatedPlayer =
-                    { currentPlayer
-                        | hands =
-                            if List.member state [ Standing, Busted ] then
-                                next ( updatedCurrentHand, rest )
-
-                            else
-                                ( updatedCurrentHand, rest )
-                    }
+                    currentPlayer
+                        |> addCards cards
+                        |> switchToNextHandIf (\h -> List.member h.state [ Standing, Busted ])
 
                 updatedPlayers =
                     ( updatedPlayer, players )
@@ -435,15 +377,13 @@ update msg model =
               else
                 NoEffect
             )
-                |> toastIf (state == Standing && List.length updatedCurrentHand.cards == 2) "Black Jack!"
-                |> toastIf (state == Busted) "Bust!"
 
         Stand ->
             let
                 updatedPlayer =
-                    { currentPlayer
-                        | hands = next <| updateCurrentHand currentPlayer.hands (\h -> { h | state = Standing })
-                    }
+                    currentPlayer
+                        |> updateCurrentHand (\h -> { h | state = Standing })
+                        |> switchToNextHand
 
                 -- Can happen when splitting
                 nextHandHasTwoCards =
@@ -522,33 +462,12 @@ update msg model =
                 ( cards, deck ) =
                     Deck.takeCard model.deck
 
-                ( currentHand, _ ) =
-                    currentPlayer.hands
-
-                updatedHand =
-                    { currentHand | cards = currentHand.cards ++ cards }
-
-                state =
-                    if Hand.largestValue updatedHand.cards > 21 then
-                        Busted
-
-                    else
-                        Standing
-
                 updatedPlayer =
-                    { currentPlayer
-                        | hands =
-                            next <|
-                                updateCurrentHand currentPlayer.hands
-                                    (\h ->
-                                        { h
-                                            | state = state
-                                            , bet = h.bet * 2
-                                            , cards = h.cards ++ cards
-                                        }
-                                    )
-                        , money = currentPlayer.money - currentBet
-                    }
+                    currentPlayer
+                        |> addCards cards
+                        |> updateCurrentHand (\h -> { h | bet = h.bet * 2 })
+                        |> updatePlayer (\p -> { p | money = p.money - currentBet })
+                        |> switchToNextHand
 
                 updatedPlayers =
                     ( updatedPlayer, players )
@@ -580,7 +499,6 @@ update msg model =
               else
                 NoEffect
             )
-                |> toastIf (state == Busted) "Bust!"
 
         -- All players are now finished
         DealerFinish ->
@@ -602,7 +520,6 @@ update msg model =
 
         -- Dealer has busted or reached 17 now
         Winnings ->
-            -- Calculate how many hands won/lost and add money to player
             let
                 dealerHandValue =
                     Hand.largestValue model.dealer
@@ -864,12 +781,70 @@ allPlayersStandingOrBusted =
     allPlayersHaveCond (\h -> List.member h.state [ Standing, Busted ])
 
 
-updateCurrentHand :
-    ( Hand, List Hand )
-    -> (Hand -> Hand)
-    -> ( Hand, List Hand )
-updateCurrentHand ( currentHand, rest ) new =
-    ( new currentHand, rest )
+updateCurrentHand : (Hand -> Hand) -> Player -> Player
+updateCurrentHand f ({ hands } as p) =
+    let
+        ( currentHand, rest ) =
+            hands
+    in
+    { p | hands = ( f currentHand, rest ) }
+
+
+updatePlayer : (Player -> Player) -> Player -> Player
+updatePlayer =
+    identity
+
+
+switchToNextHand : Player -> Player
+switchToNextHand ({ hands } as p) =
+    { p | hands = next hands }
+
+
+switchToNextHandIf : (Hand -> Bool) -> Player -> Player
+switchToNextHandIf cond ({ hands } as p) =
+    if cond (Tuple.first hands) then
+        switchToNextHand p
+
+    else
+        p
+
+
+switchToNextPlayer : ( Player, List Player ) -> ( Player, List Player )
+switchToNextPlayer =
+    next
+
+
+switchToNextPlayerIf : Bool -> ( Player, List Player ) -> ( Player, List Player )
+switchToNextPlayerIf cond =
+    if cond then
+        switchToNextPlayer
+
+    else
+        identity
+
+
+addCards : List Card.Card -> Player -> Player
+addCards cards =
+    updateCurrentHand
+        (\h ->
+            let
+                newCards =
+                    h.cards ++ cards
+            in
+            { h
+                | cards = newCards
+                , state =
+                    case Basics.compare (Hand.largestValue newCards) 21 of
+                        GT ->
+                            Busted
+
+                        EQ ->
+                            Standing
+
+                        LT ->
+                            Playing
+            }
+        )
 
 
 clearHands : Player -> Player
