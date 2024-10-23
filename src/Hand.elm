@@ -1,4 +1,4 @@
-module Hand exposing (Hand, comp, largestValue, toString)
+module Hand exposing (Hand, canSplit, comp, largestValue, toString)
 
 import Card
 
@@ -45,3 +45,13 @@ comp a b =
 toString : Hand -> String
 toString hand =
     hand |> List.map Card.toString |> String.join ","
+
+
+canSplit : Hand -> Bool
+canSplit hand =
+    case hand of
+        [ first, second ] ->
+            first.value == second.value
+
+        _ ->
+            False

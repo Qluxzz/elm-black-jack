@@ -3,11 +3,8 @@ module Main exposing
     , Dollars
     , Effect(..)
     , GameState
-    , Hand
-    , HandState
     , Model
     , Msg(..)
-    , Player
     , init
     , initWithDeck
     , main
@@ -24,6 +21,7 @@ import Html
 import Html.Attributes
 import Html.Events
 import Platform.Cmd as Cmd
+import Player
 import Process
 import Random
 import Random.List
@@ -125,29 +123,8 @@ type alias Model =
     { state : GameState
     , deck : Deck.Deck
     , dealer : Dealer
-    , players : ( Player, List Player )
+    , players : ( Player.Player, List Player.Player )
     , toast : Maybe String
-    }
-
-
-type HandState
-    = Playing
-    | Standing
-    | Busted
-
-
-type alias Hand =
-    { cards : List Card
-    , bet : Int
-    , state : HandState
-    , order : Int
-    }
-
-
-type alias Player =
-    { hands : ( Hand, List Hand )
-    , money : Int
-    , order : Int
     }
 
 
@@ -166,7 +143,7 @@ initalState =
     , dealer = []
     , players =
         ( { money = 500
-          , hands = emptyHands
+          , hands = Player.emptyHands
           , order = 0
           }
         , []
@@ -187,12 +164,12 @@ withPlayers : ( { money : Int }, List { money : Int } ) -> ( Model, Effect ) -> 
 withPlayers ( f, r ) ( model, effect ) =
     ( { model
         | players =
-            case List.indexedMap (\i { money } -> Player emptyHands money i) (f :: r) of
+            case List.indexedMap (\i { money } -> Player.Player Player.emptyHands money i) (f :: r) of
                 first :: rest ->
                     ( first, rest )
 
                 _ ->
-                    ( Player emptyHands f.money 0, [] )
+                    ( Player.Player Player.emptyHands f.money 0, [] )
       }
     , effect
     )
@@ -231,8 +208,8 @@ update msg model =
             let
                 updatedPlayer =
                     currentPlayer
-                        |> updatePlayer (\p -> { p | money = p.money - amount })
-                        |> updateCurrentHand (\h -> { h | bet = amount })
+                        |> Player.updatePlayer (\p -> { p | money = p.money - amount })
+                        |> Player.updateCurrentHand (\h -> { h | bet = amount })
 
                 allHandsHaveBet =
                     allPlayersHaveCond (\h -> h.bet /= 0) ( updatedPlayer, players )
@@ -244,7 +221,7 @@ update msg model =
 
                     else
                         model.state
-                , players = switchToNextPlayerIf allHandsHaveBet ( updatedPlayer, players )
+                , players = Player.switchToNextPlayerIf allHandsHaveBet ( updatedPlayer, players )
               }
             , if allHandsHaveBet then
                 Deal_
@@ -261,8 +238,8 @@ update msg model =
 
                 updatedPlayer =
                     currentPlayer
-                        |> addCards cards
-                        |> switchToNextHandIf (\h -> h.state == Busted)
+                        |> Player.addCards cards
+                        |> Player.switchToNextHandIf (\h -> h.state == Player.Busted)
 
                 currentHandHasTwoCards =
                     currentPlayer.hands
@@ -272,7 +249,7 @@ update msg model =
                            )
 
                 updatedPlayers =
-                    switchToNextPlayerIf currentHandHasTwoCards ( updatedPlayer, players )
+                    Player.switchToNextPlayerIf currentHandHasTwoCards ( updatedPlayer, players )
 
                 allHandsHaveTwoCards =
                     allPlayersHaveCond (\h -> List.length h.cards == 2) updatedPlayers
@@ -346,8 +323,8 @@ update msg model =
 
                 updatedPlayer =
                     currentPlayer
-                        |> addCards cards
-                        |> switchToNextHandIf (\h -> List.member h.state [ Standing, Busted ])
+                        |> Player.addCards cards
+                        |> Player.switchToNextHandIf (\h -> List.member h.state [ Player.Standing, Player.Busted ])
 
                 updatedPlayers =
                     ( updatedPlayer, players )
@@ -382,8 +359,8 @@ update msg model =
             let
                 updatedPlayer =
                     currentPlayer
-                        |> updateCurrentHand (\h -> { h | state = Standing })
-                        |> switchToNextHand
+                        |> Player.updateCurrentHand (\h -> { h | state = Player.Standing })
+                        |> Player.switchToNextHand
 
                 -- Can happen when splitting
                 nextHandHasTwoCards =
@@ -422,13 +399,13 @@ update msg model =
                 ( currentHand, rest ) =
                     currentPlayer.hands
 
-                newHands : ( Hand, List Hand )
+                newHands : ( Player.Hand, List Player.Hand )
                 newHands =
                     case currentHand.cards of
                         [ first, second ] ->
-                            ( { cards = [ first ], bet = currentHand.bet, state = Playing, order = currentHand.order }
+                            ( { cards = [ first ], bet = currentHand.bet, state = Player.Playing, order = currentHand.order }
                               -- The new hand should always have the order after the current hand
-                            , { cards = [ second ], bet = currentHand.bet, state = Playing, order = currentHand.order + 1 }
+                            , { cards = [ second ], bet = currentHand.bet, state = Player.Playing, order = currentHand.order + 1 }
                                 :: List.map
                                     (\h ->
                                         -- The order can loop around
@@ -464,10 +441,10 @@ update msg model =
 
                 updatedPlayer =
                     currentPlayer
-                        |> addCards cards
-                        |> updateCurrentHand (\h -> { h | bet = h.bet * 2 })
-                        |> updatePlayer (\p -> { p | money = p.money - currentBet })
-                        |> switchToNextHand
+                        |> Player.addCards cards
+                        |> Player.updateCurrentHand (\h -> { h | bet = h.bet * 2 })
+                        |> Player.updatePlayer (\p -> { p | money = p.money - currentBet })
+                        |> Player.switchToNextHand
 
                 updatedPlayers =
                     ( updatedPlayer, players )
@@ -525,17 +502,17 @@ update msg model =
                     Hand.largestValue model.dealer
 
                 win =
-                    calculateWinnings dealerHandValue currentPlayer
+                    Player.calculateWinnings dealerHandValue currentPlayer
 
                 updatedPlayers =
-                    ( { currentPlayer | money = currentPlayer.money + calculateWinnings dealerHandValue currentPlayer }
-                    , List.map (\p -> { p | money = p.money + calculateWinnings dealerHandValue p }) players
+                    ( { currentPlayer | money = win }
+                    , List.map (\p -> { p | money = p.money + Player.calculateWinnings dealerHandValue p }) players
                     )
             in
             ( { model | players = updatedPlayers }, NoEffect )
                 |> toast
                     (if win == 0 then
-                        "You lost $" ++ String.fromInt (currentPlayer.hands |> playerHands |> List.map .bet |> List.sum) ++ "!"
+                        "You lost $" ++ String.fromInt (currentPlayer.hands |> Player.playerHands |> List.map .bet |> List.sum) ++ "!"
 
                      else
                         "You won $" ++ String.fromInt win ++ "!"
@@ -544,7 +521,7 @@ update msg model =
         NextRound ->
             let
                 cleared =
-                    ( clearHands currentPlayer, List.map clearHands (Tuple.second model.players) )
+                    ( Player.clearHands currentPlayer, List.map Player.clearHands (Tuple.second model.players) )
 
                 newState =
                     initalState
@@ -610,7 +587,7 @@ dealerView dealer state =
         ]
 
 
-playerView : Player -> Html.Html Msg
+playerView : Player.Player -> Html.Html Msg
 playerView player =
     let
         ( activeHand, otherHands ) =
@@ -634,23 +611,23 @@ playerView player =
         ]
 
 
-inactiveHandView : Hand -> Html.Html msg
+inactiveHandView : Player.Hand -> Html.Html msg
 inactiveHandView =
     handView []
 
 
-activeHandView : Hand -> Html.Html Msg
+activeHandView : Player.Hand -> Html.Html Msg
 activeHandView ({ state } as hand) =
     handView
         [ Html.Attributes.classList
-            [ ( "active", state == Playing )
-            , ( "busted", state == Busted )
+            [ ( "active", state == Player.Playing )
+            , ( "busted", state == Player.Busted )
             ]
         ]
         hand
 
 
-handView : List (Html.Attribute msg) -> Hand -> Html.Html msg
+handView : List (Html.Attribute msg) -> Player.Hand -> Html.Html msg
 handView attributes { cards, bet } =
     Html.div (Html.Attributes.class "hand" :: attributes)
         [ Html.div [ Html.Attributes.class "cards" ]
@@ -659,7 +636,7 @@ handView attributes { cards, bet } =
         ]
 
 
-actionsView : GameState -> Player -> Html.Html Msg
+actionsView : GameState -> Player.Player -> Html.Html Msg
 actionsView state player =
     Html.div [ Html.Attributes.class "actions" ]
         [ Html.p [ Html.Attributes.class "player-money" ] [ Html.text ("$" ++ String.fromInt player.money) ]
@@ -684,7 +661,7 @@ actionsView state player =
         ]
 
 
-bettingView : Player -> Html.Html Msg
+bettingView : Player.Player -> Html.Html Msg
 bettingView { money } =
     Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
         (([ 1, 10, 100, 500 ]
@@ -715,7 +692,7 @@ bettingView { money } =
         )
 
 
-hitOrStandView : Player -> Html.Html Msg
+hitOrStandView : Player.Player -> Html.Html Msg
 hitOrStandView { money, hands } =
     let
         ( { cards, bet, state }, _ ) =
@@ -726,10 +703,10 @@ hitOrStandView { money, hands } =
             List.length cards == 1
     in
     Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
-        [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled (allDisabled || state /= Playing) ] [ Html.text "Hit" ]
-        , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled (allDisabled || state /= Playing) ] [ Html.text "Stand" ]
-        , if canSplit cards then
-            Html.button [ Html.Events.onClick Split, Html.Attributes.disabled (allDisabled || state /= Playing || money < bet) ] [ Html.text "Split" ]
+        [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled (allDisabled || state /= Player.Playing) ] [ Html.text "Hit" ]
+        , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled (allDisabled || state /= Player.Playing) ] [ Html.text "Stand" ]
+        , if Hand.canSplit cards then
+            Html.button [ Html.Events.onClick Split, Html.Attributes.disabled (allDisabled || state /= Player.Playing || money < bet) ] [ Html.text "Split" ]
 
           else
             Html.text ""
@@ -756,159 +733,24 @@ toastView message =
 -- HELPER FUNCTIONS
 
 
-allPlayers : ( Player, List Player ) -> List Player
+allPlayers : ( Player.Player, List Player.Player ) -> List Player.Player
 allPlayers ( currentPlayer, rest ) =
     currentPlayer :: rest
 
 
-playerHands : ( Hand, List Hand ) -> List Hand
-playerHands ( currentHand, rest ) =
-    currentHand :: rest
-
-
-allHands : List Player -> List Hand
+allHands : List Player.Player -> List Player.Hand
 allHands =
-    List.concatMap (.hands >> playerHands)
+    List.concatMap (.hands >> Player.playerHands)
 
 
-allPlayersHaveCond : (Hand -> Bool) -> ( Player, List Player ) -> Bool
+allPlayersHaveCond : (Player.Hand -> Bool) -> ( Player.Player, List Player.Player ) -> Bool
 allPlayersHaveCond cond =
     allPlayers >> allHands >> List.all cond
 
 
-allPlayersStandingOrBusted : ( Player, List Player ) -> Bool
+allPlayersStandingOrBusted : ( Player.Player, List Player.Player ) -> Bool
 allPlayersStandingOrBusted =
-    allPlayersHaveCond (\h -> List.member h.state [ Standing, Busted ])
-
-
-updateCurrentHand : (Hand -> Hand) -> Player -> Player
-updateCurrentHand f ({ hands } as p) =
-    let
-        ( currentHand, rest ) =
-            hands
-    in
-    { p | hands = ( f currentHand, rest ) }
-
-
-updatePlayer : (Player -> Player) -> Player -> Player
-updatePlayer =
-    identity
-
-
-switchToNextHand : Player -> Player
-switchToNextHand ({ hands } as p) =
-    { p | hands = next hands }
-
-
-switchToNextHandIf : (Hand -> Bool) -> Player -> Player
-switchToNextHandIf cond ({ hands } as p) =
-    if cond (Tuple.first hands) then
-        switchToNextHand p
-
-    else
-        p
-
-
-switchToNextPlayer : ( Player, List Player ) -> ( Player, List Player )
-switchToNextPlayer =
-    next
-
-
-switchToNextPlayerIf : Bool -> ( Player, List Player ) -> ( Player, List Player )
-switchToNextPlayerIf cond =
-    if cond then
-        switchToNextPlayer
-
-    else
-        identity
-
-
-addCards : List Card.Card -> Player -> Player
-addCards cards =
-    updateCurrentHand
-        (\h ->
-            let
-                newCards =
-                    h.cards ++ cards
-            in
-            { h
-                | cards = newCards
-                , state =
-                    case Basics.compare (Hand.largestValue newCards) 21 of
-                        GT ->
-                            Busted
-
-                        EQ ->
-                            Standing
-
-                        LT ->
-                            Playing
-            }
-        )
-
-
-clearHands : Player -> Player
-clearHands player =
-    { player | hands = emptyHands }
-
-
-canSplit : Hand.Hand -> Bool
-canSplit hand =
-    case hand of
-        [ first, second ] ->
-            first.value == second.value
-
-        _ ->
-            False
-
-
-next : ( x, List x ) -> ( x, List x )
-next ( current, rest ) =
-    case rest of
-        x :: xs ->
-            ( x, xs ++ [ current ] )
-
-        _ ->
-            ( current, rest )
-
-
-calculateWinnings : Int -> Player -> Int
-calculateWinnings dealerHand { hands } =
-    List.foldr
-        (\{ cards, bet, state } acc ->
-            if state == Busted then
-                -- You busted, no win
-                acc
-
-            else if dealerHand > 21 then
-                -- Dealer busted, automatic win
-                acc + bet * 2
-
-            else if Hand.largestValue cards == 21 then
-                -- Black Jack, pays 3 to 2
-                acc + bet * 3
-
-            else
-                case Basics.compare (Hand.largestValue cards) dealerHand of
-                    GT ->
-                        -- You won over the dealer, you get 2x your bet back
-                        acc + bet * 2
-
-                    EQ ->
-                        -- Push, you get your inital bet back
-                        acc + bet
-
-                    LT ->
-                        -- You lost to the dealer
-                        acc
-        )
-        0
-        (playerHands hands)
-
-
-emptyHands : ( Hand, List Hand )
-emptyHands =
-    ( { cards = [], bet = 0, state = Playing, order = 0 }, [] )
+    allPlayersHaveCond (\h -> List.member h.state [ Player.Standing, Player.Busted ])
 
 
 toast : String -> ( Model, Effect ) -> ( Model, Effect )
