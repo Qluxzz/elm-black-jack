@@ -692,8 +692,17 @@ actionsView state player =
 
 bettingView : Player.Player -> Html.Html Msg
 bettingView { money } =
+    let
+        markerAmounts =
+            [ 1, 10, 100, 500 ]
+
+        showAllInButton =
+            List.maximum markerAmounts
+                |> Maybe.map (\v -> money > v)
+                |> Maybe.withDefault False
+    in
     Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
-        (([ 1, 10, 100, 500 ]
+        ((markerAmounts
             |> List.map
                 (\amount ->
                     Html.div
@@ -712,7 +721,7 @@ bettingView { money } =
                         [ Html.text ("$" ++ String.fromInt amount) ]
                 )
          )
-            ++ (if money > 500 then
+            ++ (if showAllInButton then
                     [ Html.button [ Html.Events.onClick (Bet money) ] [ Html.text "All in!" ] ]
 
                 else
@@ -727,7 +736,6 @@ hitOrStandView { money, hands } =
         ( { cards, bet, state }, _ ) =
             hands
 
-        -- We will be given another card soon, happens when splitting
         allDisabled =
             List.length cards == 1 || state /= Player.Playing
     in
