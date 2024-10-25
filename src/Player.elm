@@ -117,7 +117,7 @@ calculateWinnings dealerHand { hands } =
         (\{ cards, bet, state } acc ->
             if state == Busted then
                 -- You busted, no win
-                acc
+                acc - bet
 
             else if dealerHand > 21 then
                 -- Dealer busted, automatic win
@@ -139,7 +139,7 @@ calculateWinnings dealerHand { hands } =
 
                     LT ->
                         -- You lost to the dealer
-                        acc
+                        acc - bet
         )
         0
         (playerHands hands)

@@ -521,15 +521,26 @@ update msg model =
                     Player.calculateWinnings dealerHandValue currentPlayer
 
                 updatedPlayers =
-                    ( { currentPlayer | money = currentPlayer.money + win }
-                    , List.map (\p -> { p | money = p.money + Player.calculateWinnings dealerHandValue p }) players
+                    ( { currentPlayer
+                        | money =
+                            currentPlayer.money + clamp 0 win win
+                      }
+                    , List.map
+                        (\p ->
+                            let
+                                win_ =
+                                    Player.calculateWinnings dealerHandValue p
+                            in
+                            { p | money = p.money + clamp 0 win_ win_ }
+                        )
+                        players
                     )
             in
             ( { model | players = updatedPlayers }, NoEffect )
                 |> withToast
                     (Just
-                        (if win == 0 then
-                            "You lost $" ++ String.fromInt (currentPlayer.hands |> Player.playerHands |> List.map .bet |> List.sum) ++ "!"
+                        (if win < 0 then
+                            "You lost $" ++ String.fromInt (abs win) ++ "!"
 
                          else
                             "You won $" ++ String.fromInt win ++ "!"
