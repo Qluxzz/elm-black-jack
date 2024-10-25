@@ -721,10 +721,10 @@ hitOrStandView { money, hands } =
             List.length cards == 1 || state /= Player.Playing
     in
     Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
-        [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled (allDisabled || state /= Player.Playing) ] [ Html.text "Hit" ]
-        , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled (allDisabled || state /= Player.Playing) ] [ Html.text "Stand" ]
+        [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled allDisabled ] [ Html.text "Hit" ]
+        , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled allDisabled ] [ Html.text "Stand" ]
         , if Cards.canSplit cards then
-            Html.button [ Html.Events.onClick Split, Html.Attributes.disabled (allDisabled || state /= Player.Playing || money < bet) ] [ Html.text "Split" ]
+            Html.button [ Html.Events.onClick Split, Html.Attributes.disabled (allDisabled || money < bet) ] [ Html.text "Split" ]
 
           else
             Html.text ""
