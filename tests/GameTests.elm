@@ -46,6 +46,21 @@ suite =
                     |> ProgramTest.clickButton "Stand"
                     -- Ensure player won after clicking stand
                     |> ProgramTest.ensureView (playerHasMoney 400)
+                    -- Continue to next round
+                    |> ProgramTest.clickButton "Continue?"
+                    |> ProgramTest.clickButton "$100"
+                    -- Validate that the user has the expected cards
+                    |> ProgramTest.ensureView
+                        (handHasCards 0 [ Card Card.Eight Card.Spades, Card Card.Ten Card.Spades ])
+                    -- Validate that the player money has decreased according to the bet
+                    -- And that we're in the hit or stand phase of the game
+                    |> ProgramTest.ensureView (playerHasMoney 300)
+                    |> ProgramTest.clickButton "Hit"
+                    -- Ensure player has three cards after taking another card
+                    |> ProgramTest.ensureView
+                        (handHasCards 0 [ Card Card.Eight Card.Spades, Card Card.Ten Card.Spades, Card Card.Queen Card.Spades ])
+                    -- Ensure player lost because hand was over 21
+                    |> ProgramTest.ensureView (playerHasMoney 300)
                     |> ProgramTest.expectViewHas [ continueButton ]
         , describe "Splitting"
             [ test "Allowed if user has cards with equal value and enough funds" <|
