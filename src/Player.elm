@@ -123,7 +123,7 @@ calculateWinnings dealerHand { hands } =
                 -- Dealer busted, automatic win
                 acc + bet * 2
 
-            else if Cards.largestValue cards == 21 then
+            else if List.length cards == 2 && Cards.largestValue cards == 21 then
                 -- Black Jack, pays 3 to 2
                 acc + bet * 3
 

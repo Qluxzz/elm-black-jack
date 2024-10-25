@@ -103,7 +103,7 @@ perform effect =
             Process.sleep 1000 |> Task.perform (\_ -> TakeCard)
 
         DealerFinish_ ->
-            Process.sleep 0 |> Task.perform (\_ -> DealerFinish)
+            Process.sleep 1000 |> Task.perform (\_ -> DealerFinish)
 
         Winnings_ ->
             Process.sleep 0 |> Task.perform (\_ -> Winnings)
@@ -334,18 +334,14 @@ update msg model =
                         |> Player.addCards cards
                         |> Player.addToastIfCurrentHandHas
                             (\h ->
-                                case Basics.compare (Cards.largestValue h.cards) 21 of
-                                    GT ->
+                                case ( Basics.compare (Cards.largestValue h.cards) 21, List.length h.cards ) of
+                                    ( GT, _ ) ->
                                         Just "Bust!"
 
-                                    EQ ->
-                                        if List.length h.cards == 2 then
-                                            Just "Black Jack!"
+                                    ( EQ, 2 ) ->
+                                        Just "Black Jack!"
 
-                                        else
-                                            Nothing
-
-                                    LT ->
+                                    _ ->
                                         Nothing
                             )
                         |> Tuple.mapFirst (Player.switchToNextHandIf (\h -> List.member h.state [ Player.Standing, Player.Busted ]))
@@ -362,12 +358,6 @@ update msg model =
             ( { model
                 | deck = deck
                 , players = updatedPlayers
-                , state =
-                    if allPlayersStandingOrBusted_ then
-                        DealerFinishes
-
-                    else
-                        model.state
               }
             , if allPlayersStandingOrBusted_ then
                 DealerFinish_
@@ -399,15 +389,7 @@ update msg model =
                 allPlayersStandingOrBusted_ =
                     allPlayersStandingOrBusted updatedPlayers
             in
-            ( { model
-                | players = ( updatedPlayer, Tuple.second model.players )
-                , state =
-                    if allPlayersStandingOrBusted_ then
-                        DealerFinishes
-
-                    else
-                        model.state
-              }
+            ( { model | players = ( updatedPlayer, Tuple.second model.players ) }
             , if allPlayersStandingOrBusted_ then
                 DealerFinish_
 
@@ -527,7 +509,7 @@ update msg model =
                 ( { model | state = Result }, Winnings_ )
 
             else
-                ( model, DealerTakesCard_ )
+                ( { model | state = DealerFinishes }, DealerTakesCard_ )
 
         -- Dealer has busted or reached 17 now
         Winnings ->
@@ -736,7 +718,7 @@ hitOrStandView { money, hands } =
 
         -- We will be given another card soon, happens when splitting
         allDisabled =
-            List.length cards == 1
+            List.length cards == 1 || state /= Player.Playing
     in
     Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
         [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled (allDisabled || state /= Player.Playing) ] [ Html.text "Hit" ]
@@ -749,7 +731,7 @@ hitOrStandView { money, hands } =
         , if List.length cards == 2 then
             Html.button
                 [ Html.Events.onClick DoubleDown
-                , Html.Attributes.disabled (money < bet)
+                , Html.Attributes.disabled (money < bet || allDisabled)
                 ]
                 [ Html.text "Double down" ]
 
