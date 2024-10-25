@@ -1,12 +1,12 @@
 module HandTests exposing (suite)
 
 import Card
+import Cards
 import Expect
-import Hand
 import Test exposing (Test, describe, test)
 
 
-cases : List ( ( Hand.Hand, Hand.Hand ), Order )
+cases : List ( ( List Card.Card, List Card.Card ), Order )
 cases =
     [ ( ( [ card Card.Ace, card Card.King ], [ card Card.Ace, card Card.King ] ), EQ )
     , ( ( [ card Card.Two, card Card.Three ], [ card Card.Two, card Card.Five ] ), LT )
@@ -20,8 +20,8 @@ suite =
     describe "Hand tests"
         (List.map
             (\( ( h1, h2 ), expected ) ->
-                test (Hand.toString h1 ++ " " ++ Hand.toString h2) <|
-                    \_ -> Hand.comp h1 h2 |> Expect.equal expected
+                test (Cards.toString h1 ++ " " ++ Cards.toString h2) <|
+                    \_ -> Cards.comp h1 h2 |> Expect.equal expected
             )
             cases
         )

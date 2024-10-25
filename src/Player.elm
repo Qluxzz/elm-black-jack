@@ -1,7 +1,7 @@
 module Player exposing (..)
 
 import Card
-import Hand
+import Cards
 
 
 type HandState
@@ -78,7 +78,7 @@ addCards cards =
             { h
                 | cards = newCards
                 , state =
-                    case Basics.compare (Hand.largestValue newCards) 21 of
+                    case Basics.compare (Cards.largestValue newCards) 21 of
                         GT ->
                             Busted
 
@@ -123,12 +123,12 @@ calculateWinnings dealerHand { hands } =
                 -- Dealer busted, automatic win
                 acc + bet * 2
 
-            else if Hand.largestValue cards == 21 then
+            else if Cards.largestValue cards == 21 then
                 -- Black Jack, pays 3 to 2
                 acc + bet * 3
 
             else
-                case Basics.compare (Hand.largestValue cards) dealerHand of
+                case Basics.compare (Cards.largestValue cards) dealerHand of
                     GT ->
                         -- You won over the dealer, you get 2x your bet back
                         acc + bet * 2
@@ -148,3 +148,8 @@ calculateWinnings dealerHand { hands } =
 playerHands : ( Hand, List Hand ) -> List Hand
 playerHands ( currentHand, rest ) =
     currentHand :: rest
+
+
+addToastIfCurrentHandHas : (Hand -> Maybe String) -> Player -> ( Player, Maybe String )
+addToastIfCurrentHandHas cond ({ hands } as p) =
+    ( p, cond (Tuple.first hands) )

@@ -15,8 +15,8 @@ module Main exposing
 
 import Browser
 import Card exposing (Card)
+import Cards
 import Deck
-import Hand
 import Html
 import Html.Attributes
 import Html.Events
@@ -212,7 +212,7 @@ update msg model =
                         |> Player.updateCurrentHand (\h -> { h | bet = amount })
 
                 allHandsHaveBet =
-                    allPlayersHaveCond (\h -> h.bet /= 0) ( updatedPlayer, players )
+                    allPlayerHandsHaveCond (\h -> h.bet /= 0) ( updatedPlayer, players )
             in
             ( { model
                 | state =
@@ -236,10 +236,17 @@ update msg model =
                 ( cards, deck ) =
                     Deck.takeCard model.deck
 
-                updatedPlayer =
+                ( updatedPlayer, toast ) =
                     currentPlayer
                         |> Player.addCards cards
-                        |> Player.switchToNextHandIf (\h -> h.state == Player.Busted)
+                        |> Player.addToastIfCurrentHandHas
+                            (\h ->
+                                if Cards.largestValue h.cards == 21 then
+                                    Just "Black Jack!"
+
+                                else
+                                    Nothing
+                            )
 
                 currentHandHasTwoCards =
                     currentPlayer.hands
@@ -252,7 +259,7 @@ update msg model =
                     Player.switchToNextPlayerIf currentHandHasTwoCards ( updatedPlayer, players )
 
                 allHandsHaveTwoCards =
-                    allPlayersHaveCond (\h -> List.length h.cards == 2) updatedPlayers
+                    allPlayerHandsHaveCond (\h -> List.length h.cards == 2) updatedPlayers
             in
             ( { model
                 | deck = deck
@@ -267,7 +274,7 @@ update msg model =
             , if allHandsHaveTwoCards then
                 DealerTakesCard_
 
-              else if allPlayersHaveCond (\h -> List.length h.cards == 1) updatedPlayers then
+              else if allPlayerHandsHaveCond (\h -> List.length h.cards == 1) updatedPlayers then
                 DealerTakesCard_
 
               else if allPlayersStandingOrBusted updatedPlayers then
@@ -276,6 +283,7 @@ update msg model =
               else
                 Deal_
             )
+                |> withToast toast
 
         DealerTakesCard ->
             let
@@ -321,10 +329,26 @@ update msg model =
                 ( cards, deck ) =
                     Deck.takeCard model.deck
 
-                updatedPlayer =
+                ( updatedPlayer, toast ) =
                     currentPlayer
                         |> Player.addCards cards
-                        |> Player.switchToNextHandIf (\h -> List.member h.state [ Player.Standing, Player.Busted ])
+                        |> Player.addToastIfCurrentHandHas
+                            (\h ->
+                                case Basics.compare (Cards.largestValue h.cards) 21 of
+                                    GT ->
+                                        Just "Bust!"
+
+                                    EQ ->
+                                        if List.length h.cards == 2 then
+                                            Just "Black Jack!"
+
+                                        else
+                                            Nothing
+
+                                    LT ->
+                                        Nothing
+                            )
+                        |> Tuple.mapFirst (Player.switchToNextHandIf (\h -> List.member h.state [ Player.Standing, Player.Busted ]))
 
                 updatedPlayers =
                     ( updatedPlayer, players )
@@ -354,6 +378,7 @@ update msg model =
               else
                 NoEffect
             )
+                |> withToast toast
 
         Stand ->
             let
@@ -439,12 +464,20 @@ update msg model =
                 ( cards, deck ) =
                     Deck.takeCard model.deck
 
-                updatedPlayer =
+                ( updatedPlayer, toast ) =
                     currentPlayer
                         |> Player.addCards cards
-                        |> Player.updateCurrentHand (\h -> { h | bet = h.bet * 2 })
                         |> Player.updatePlayer (\p -> { p | money = p.money - currentBet })
-                        |> Player.switchToNextHand
+                        |> Player.updateCurrentHand (\h -> { h | bet = h.bet * 2, state = Player.Standing })
+                        |> Player.addToastIfCurrentHandHas
+                            (\h ->
+                                if Cards.largestValue h.cards > 21 then
+                                    Just "Bust!"
+
+                                else
+                                    Nothing
+                            )
+                        |> Tuple.mapFirst Player.switchToNextHand
 
                 updatedPlayers =
                     ( updatedPlayer, players )
@@ -476,12 +509,13 @@ update msg model =
               else
                 NoEffect
             )
+                |> withToast toast
 
         -- All players are now finished
         DealerFinish ->
             let
                 dealerHandValue =
-                    model.dealer |> Hand.largestValue
+                    model.dealer |> Cards.largestValue
 
                 dealerHasReachedLimit =
                     dealerHandValue >= 17
@@ -499,23 +533,25 @@ update msg model =
         Winnings ->
             let
                 dealerHandValue =
-                    Hand.largestValue model.dealer
+                    Cards.largestValue model.dealer
 
                 win =
                     Player.calculateWinnings dealerHandValue currentPlayer
 
                 updatedPlayers =
-                    ( { currentPlayer | money = win }
+                    ( { currentPlayer | money = currentPlayer.money + win }
                     , List.map (\p -> { p | money = p.money + Player.calculateWinnings dealerHandValue p }) players
                     )
             in
             ( { model | players = updatedPlayers }, NoEffect )
-                |> toast
-                    (if win == 0 then
-                        "You lost $" ++ String.fromInt (currentPlayer.hands |> Player.playerHands |> List.map .bet |> List.sum) ++ "!"
+                |> withToast
+                    (Just
+                        (if win == 0 then
+                            "You lost $" ++ String.fromInt (currentPlayer.hands |> Player.playerHands |> List.map .bet |> List.sum) ++ "!"
 
-                     else
-                        "You won $" ++ String.fromInt win ++ "!"
+                         else
+                            "You won $" ++ String.fromInt win ++ "!"
+                        )
                     )
 
         NextRound ->
@@ -705,7 +741,7 @@ hitOrStandView { money, hands } =
     Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
         [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled (allDisabled || state /= Player.Playing) ] [ Html.text "Hit" ]
         , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled (allDisabled || state /= Player.Playing) ] [ Html.text "Stand" ]
-        , if Hand.canSplit cards then
+        , if Cards.canSplit cards then
             Html.button [ Html.Events.onClick Split, Html.Attributes.disabled (allDisabled || state /= Player.Playing || money < bet) ] [ Html.text "Split" ]
 
           else
@@ -743,25 +779,21 @@ allHands =
     List.concatMap (.hands >> Player.playerHands)
 
 
-allPlayersHaveCond : (Player.Hand -> Bool) -> ( Player.Player, List Player.Player ) -> Bool
-allPlayersHaveCond cond =
+allPlayerHandsHaveCond : (Player.Hand -> Bool) -> ( Player.Player, List Player.Player ) -> Bool
+allPlayerHandsHaveCond cond =
     allPlayers >> allHands >> List.all cond
 
 
 allPlayersStandingOrBusted : ( Player.Player, List Player.Player ) -> Bool
 allPlayersStandingOrBusted =
-    allPlayersHaveCond (\h -> List.member h.state [ Player.Standing, Player.Busted ])
+    allPlayerHandsHaveCond (\h -> List.member h.state [ Player.Standing, Player.Busted ])
 
 
-toast : String -> ( Model, Effect ) -> ( Model, Effect )
-toast message ( model, effect ) =
-    ( { model | toast = Just message }, Multiple [ effect, ClearToast_ ] )
+withToast : Maybe String -> ( Model, Effect ) -> ( Model, Effect )
+withToast message ( model, effect ) =
+    case message of
+        Just m ->
+            ( { model | toast = Just m }, Multiple [ effect, ClearToast_ ] )
 
-
-toastIf : Bool -> String -> ( Model, Effect ) -> ( Model, Effect )
-toastIf cond message =
-    if cond then
-        toast message
-
-    else
-        identity
+        Nothing ->
+            ( model, effect )
