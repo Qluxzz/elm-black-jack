@@ -100,6 +100,52 @@ cases =
       -- We have bet 200 dollars, we lose the 100 on one hand, and win 100 (in addition to our bet) on the other
       , expectedWinnings = 100
       }
+
+    -- Two hands, one double down won and one regular won
+    , { hands =
+            ( { bet = 200
+              , cards = [ Card.Card Card.Ten Card.Diamonds, Card.Card Card.Two Card.Hearts, Card.Card Card.Nine Card.Spades ]
+              , state = Player.Standing
+              , order = 0
+              }
+            , [ { bet = 100
+                , cards = List.repeat 2 (Card.Card Card.Ten Card.Diamonds)
+                , state = Player.Standing
+                , order = 0
+                }
+              ]
+            )
+      , dealerHandValue = 19
+
+      -- We have bet 300 dollars, we get 200 * 2, and 100 * 2 back
+      , expectedWinnings = 600
+      }
+
+    -- Dealer busts
+    , { hands =
+            ( { bet = 100
+              , cards = List.repeat 2 (Card.Card Card.Two Card.Diamonds)
+              , state = Player.Standing
+              , order = 0
+              }
+            , []
+            )
+      , dealerHandValue = 25
+      , expectedWinnings = 200
+      }
+
+    -- Dealer and player busts
+    , { hands =
+            ( { bet = 100
+              , cards = List.repeat 3 (Card.Card Card.Ten Card.Diamonds)
+              , state = Player.Busted
+              , order = 0
+              }
+            , []
+            )
+      , dealerHandValue = 25
+      , expectedWinnings = -100
+      }
     ]
 
 
