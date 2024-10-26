@@ -111,24 +111,33 @@ next ( current, rest ) =
             ( current, rest )
 
 
-calculateWinnings : Int -> Player -> Int
+calculateWinnings : List Card.Card -> Player -> Int
 calculateWinnings dealerHand { hands } =
+    let
+        dealerHandValue =
+            Cards.largestValue dealerHand
+    in
     List.foldr
         (\{ cards, bet, state } acc ->
             if state == Busted then
                 -- You busted, no win
                 acc - bet
 
-            else if dealerHand > 21 then
+            else if dealerHandValue > 21 then
                 -- Dealer busted, automatic win
                 acc + bet * 2
 
             else if List.length cards == 2 && Cards.largestValue cards == 21 then
-                -- Black Jack, pays 3 to 2
-                acc + bet * 3
+                if List.length dealerHand == 2 && dealerHandValue == 21 then
+                    -- Push
+                    acc + bet
+
+                else
+                    -- Black Jack, pays 3 to 2
+                    acc + bet * 3
 
             else
-                case Basics.compare (Cards.largestValue cards) dealerHand of
+                case Basics.compare (Cards.largestValue cards) dealerHandValue of
                     GT ->
                         -- You won over the dealer, you get 2x your bet back
                         acc + bet * 2

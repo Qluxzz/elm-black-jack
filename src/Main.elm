@@ -502,11 +502,8 @@ update msg model =
         -- Dealer has busted or reached 17 now
         Winnings ->
             let
-                dealerHandValue =
-                    Cards.largestValue model.dealer
-
                 win =
-                    Player.calculateWinnings dealerHandValue currentPlayer
+                    Player.calculateWinnings model.dealer currentPlayer
 
                 updatedPlayers =
                     ( { currentPlayer
@@ -517,7 +514,7 @@ update msg model =
                         (\p ->
                             let
                                 win_ =
-                                    Player.calculateWinnings dealerHandValue p
+                                    Player.calculateWinnings model.dealer p
                             in
                             { p | money = p.money + clamp 0 win_ win_ }
                         )

@@ -8,7 +8,7 @@ import Test exposing (Test, describe, test)
 
 
 type alias Case =
-    { hands : ( Player.Hand, List Player.Hand ), dealerHandValue : Int, expectedWinnings : Int }
+    { hands : ( Player.Hand, List Player.Hand ), dealerHand : List Card.Card, expectedWinnings : Int }
 
 
 cases : List Case
@@ -25,8 +25,30 @@ cases =
               }
             , []
             )
-      , dealerHandValue = 17
+      , dealerHand =
+            [ Card.Card Card.Ace Card.Diamonds
+            , Card.Card Card.Six Card.Spades
+            ]
       , expectedWinnings = 300
+      }
+
+    -- Both have black jack, push
+    , { hands =
+            ( { bet = 100
+              , cards =
+                    [ Card.Card Card.Ace Card.Diamonds
+                    , Card.Card Card.King Card.Clubs
+                    ]
+              , state = Player.Standing
+              , order = 0
+              }
+            , []
+            )
+      , dealerHand =
+            [ Card.Card Card.Ace Card.Diamonds
+            , Card.Card Card.King Card.Clubs
+            ]
+      , expectedWinnings = 100
       }
 
     -- Regular win
@@ -38,7 +60,10 @@ cases =
               }
             , []
             )
-      , dealerHandValue = 19
+      , dealerHand =
+            [ Card.Card Card.Ten Card.Clubs
+            , Card.Card Card.Nine Card.Diamonds
+            ]
       , expectedWinnings = 200
       }
 
@@ -51,7 +76,10 @@ cases =
               }
             , []
             )
-      , dealerHandValue = 17
+      , dealerHand =
+            [ Card.Card Card.Seven Card.Clubs
+            , Card.Card Card.Queen Card.Diamonds
+            ]
       , expectedWinnings = -100
       }
 
@@ -64,7 +92,7 @@ cases =
               }
             , []
             )
-      , dealerHandValue = 20
+      , dealerHand = List.repeat 2 (Card.Card Card.Ten Card.Diamonds)
       , expectedWinnings = 100
       }
 
@@ -77,7 +105,11 @@ cases =
               }
             , []
             )
-      , dealerHandValue = 21
+      , dealerHand =
+            [ Card.Card Card.Ace Card.Clubs
+            , Card.Card Card.Five Card.Diamonds
+            , Card.Card Card.Five Card.Diamonds
+            ]
       , expectedWinnings = -100
       }
 
@@ -95,7 +127,10 @@ cases =
                 }
               ]
             )
-      , dealerHandValue = 19
+      , dealerHand =
+            [ Card.Card Card.Nine Card.Clubs
+            , Card.Card Card.Jack Card.Spades
+            ]
 
       -- We have bet 200 dollars, we lose the 100 on one hand, and win 100 (in addition to our bet) on the other
       , expectedWinnings = 100
@@ -115,7 +150,10 @@ cases =
                 }
               ]
             )
-      , dealerHandValue = 19
+      , dealerHand =
+            [ Card.Card Card.Nine Card.Clubs
+            , Card.Card Card.Jack Card.Spades
+            ]
 
       -- We have bet 300 dollars, we get 200 * 2, and 100 * 2 back
       , expectedWinnings = 600
@@ -130,7 +168,11 @@ cases =
               }
             , []
             )
-      , dealerHandValue = 25
+      , dealerHand =
+            [ Card.Card Card.Five Card.Diamonds
+            , Card.Card Card.Ten Card.Spades
+            , Card.Card Card.Jack Card.Clubs
+            ]
       , expectedWinnings = 200
       }
 
@@ -143,7 +185,11 @@ cases =
               }
             , []
             )
-      , dealerHandValue = 25
+      , dealerHand =
+            [ Card.Card Card.Five Card.Diamonds
+            , Card.Card Card.Ten Card.Spades
+            , Card.Card Card.Jack Card.Clubs
+            ]
       , expectedWinnings = -100
       }
     ]
@@ -153,10 +199,10 @@ suite : Test
 suite =
     describe "calculateWinnings"
         (List.map
-            (\{ hands, dealerHandValue, expectedWinnings } ->
-                test ("Player hands: " ++ String.join ", " (List.map (.cards >> Cards.toString) (Tuple.first hands :: Tuple.second hands)) ++ ", Dealer hand " ++ String.fromInt dealerHandValue ++ " = " ++ String.fromInt expectedWinnings) <|
+            (\{ hands, dealerHand, expectedWinnings } ->
+                test ("Player hands: " ++ String.join ", " (List.map (.cards >> Cards.toString) (Tuple.first hands :: Tuple.second hands)) ++ ", Dealer hand " ++ Cards.toString dealerHand ++ " = " ++ String.fromInt expectedWinnings) <|
                     \_ ->
-                        Player.calculateWinnings dealerHandValue (Player.Player hands 0 0)
+                        Player.calculateWinnings dealerHand (Player.Player hands 0 0)
                             |> Expect.equal expectedWinnings
             )
             cases
