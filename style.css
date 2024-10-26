@@ -134,8 +134,8 @@ body>div {
         align-items: center;
         font-size: 32px;
         font-weight: bold;
-        width: 50%;
-        height: 150px;
+        padding: 10px;
+        height: 125px;
         background-color: #fff;
         color: #000;
         border-radius: 10px;
@@ -436,7 +436,7 @@ body>div {
         transform: translateY(-10px);
     }
 
-    &.disabled {
+    &:disabled {
         filter: opacity(0.2);
         pointer-events: none;
     }
@@ -447,7 +447,7 @@ body>div {
     }
 
     &._10 {
-        background-color: rgb(255, 0, 0));
+        background-color: rgb(255, 0, 0);
     }
 
     &._100 {
