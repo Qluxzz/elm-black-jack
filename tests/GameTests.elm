@@ -367,6 +367,7 @@ suite =
                         -- Deal a card per 'tick', so four means the dealer and the player has two cards each
                         |> ProgramTest.advanceTime 4
                         |> ProgramTest.clickButton "Double down"
+                        |> ProgramTest.ensureView (handHasBusted 0)
                         |> ProgramTest.expectView (toastHasMessage "Bust!")
             ]
         , test "Bust if more than 21 in value" <|
@@ -488,8 +489,16 @@ handHasBet : Int -> Int -> Query.Single msg -> Expect.Expectation
 handHasBet index amount query =
     query
         |> playerHands
-        |> Query.index -index
+        |> Query.index index
         |> Query.has [ Selector.exactText (toDollars amount) ]
+
+
+handHasBusted : Int -> Query.Single msg -> Expect.Expectation
+handHasBusted index query =
+    query
+        |> playerHands
+        |> Query.index index
+        |> Query.has [ Selector.class "busted" ]
 
 
 continueButton : Selector.Selector

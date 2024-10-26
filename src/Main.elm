@@ -433,7 +433,18 @@ update msg model =
                     currentPlayer
                         |> Player.addCards cards
                         |> Player.updatePlayer (\p -> { p | money = p.money - currentBet })
-                        |> Player.updateCurrentHand (\h -> { h | bet = h.bet * 2, state = Player.Standing })
+                        |> Player.updateCurrentHand
+                            (\h ->
+                                { h
+                                    | bet = h.bet * 2
+                                    , state =
+                                        if h.state == Player.Playing then
+                                            Player.Standing
+
+                                        else
+                                            h.state
+                                }
+                            )
                         |> Player.addToastIfCurrentHandHas
                             (\h ->
                                 if Cards.largestValue h.cards > 21 then
