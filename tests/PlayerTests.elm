@@ -51,6 +51,46 @@ cases =
       , expectedWinnings = 100
       }
 
+    -- Dealer has 21 but not black jack, should still pay out 3 to 2
+    , { hands =
+            ( { bet = 100
+              , cards =
+                    [ Card.Card Card.Ace Card.Diamonds
+                    , Card.Card Card.King Card.Clubs
+                    ]
+              , state = Player.Standing
+              , order = 0
+              }
+            , []
+            )
+      , dealerHand =
+            [ Card.Card Card.Six Card.Diamonds
+            , Card.Card Card.Five Card.Clubs
+            , Card.Card Card.Ten Card.Clubs
+            ]
+      , expectedWinnings = 300
+      }
+
+    -- Dealer busts, player has black jack, should pay out 3 to 2
+    , { hands =
+            ( { bet = 100
+              , cards =
+                    [ Card.Card Card.Ace Card.Diamonds
+                    , Card.Card Card.King Card.Clubs
+                    ]
+              , state = Player.Standing
+              , order = 0
+              }
+            , []
+            )
+      , dealerHand =
+            [ Card.Card Card.Six Card.Diamonds
+            , Card.Card Card.Seven Card.Clubs
+            , Card.Card Card.Ten Card.Clubs
+            ]
+      , expectedWinnings = 300
+      }
+
     -- Regular win
     , { hands =
             ( { bet = 100

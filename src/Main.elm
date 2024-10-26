@@ -242,7 +242,7 @@ update msg model =
                         |> Player.addCards cards
                         |> Player.addToastIfCurrentHandHas
                             (\h ->
-                                if Cards.largestValue h.cards == 21 then
+                                if Cards.hasBlackJack h.cards then
                                     Just "Black Jack!"
 
                                 else

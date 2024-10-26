@@ -1,4 +1,4 @@
-module Cards exposing (canSplit, comp, largestValue, toString)
+module Cards exposing (canSplit, comp, hasBlackJack, largestValue, toString)
 
 import Card
 
@@ -53,3 +53,8 @@ canSplit cards =
 
         _ ->
             False
+
+
+hasBlackJack : List Card.Card -> Bool
+hasBlackJack cards =
+    List.length cards == 2 && largestValue cards == 21

@@ -169,7 +169,7 @@ suite =
                                 , handHasCards 1 [ Card Card.Ace Card.Spades, Card Card.Nine Card.Clubs ]
                                 ]
                             )
-                        |> ProgramTest.ensureView (playerHasMoney 600)
+                        |> ProgramTest.ensureView (playerHasMoney 700)
                         |> ProgramTest.expectViewHas [ continueButton ]
             , test "Splitting and doubling down on first hand does not lock up game" <|
                 \_ ->
