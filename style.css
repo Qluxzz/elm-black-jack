@@ -105,7 +105,7 @@ body>div {
     }
 
     /* Play splitting animation on the first card of the new hand */
-    /* TODO: This doesn't work when splitting two hands into three hands, the animation plays for the wrong hand */
+    /* TODO: This doesn't work when splitting the first hand multiple times, the animation plays for the wrong hand */
     &:not(:first-child)>.cards>.card:first-child>.card-inner {
         top: 0;
         animation: split-hand 600ms;
