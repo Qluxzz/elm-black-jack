@@ -1,4 +1,4 @@
-module Main exposing
+port module Main exposing
     ( Dealer
     , Dollars
     , Effect(..)
@@ -50,7 +50,8 @@ type alias Dollars =
 
 
 type Msg
-    = ShuffledDeck Deck.Deck
+    = StartNewGame
+    | ShuffledDeck Deck.Deck
       -- Betting
     | Bet Dollars
       -- Deal
@@ -72,14 +73,13 @@ type Msg
 type Effect
     = NoEffect
     | ShuffleDeck_ Deck.Deck
-      -- Betting
     | Deal_
     | DealerTakesCard_
     | TakeCard_
     | DealerFinish_
     | Winnings_
-      -- Toast
     | ClearToast_
+    | UpdateHighScore Int
     | Multiple (List Effect)
 
 
@@ -110,8 +110,22 @@ perform effect =
         ClearToast_ ->
             Process.sleep 2000 |> Task.perform (\_ -> ClearToast)
 
+        UpdateHighScore highScore ->
+            updateHighScore highScore
+
         Multiple effects ->
             Cmd.batch (List.map perform effects)
+
+
+
+-- PORTS
+
+
+port updateHighScore : Int -> Cmd msg
+
+
+
+-- END OF PORTS
 
 
 type alias Dealer =
@@ -124,11 +138,13 @@ type alias Model =
     , dealer : Dealer
     , players : ( Player.Player, List Player.Player )
     , toast : Maybe String
+    , highScore : Maybe Int
     }
 
 
 type GameState
-    = ShuffleCards -- Only done at start and if not enough cards left for a new round, TODO: Implement cutting the deck?
+    = MainMenu
+    | ShuffleCards -- Only done at start and if not enough cards left for a new round, TODO: Implement cutting the deck?
     | Betting
     | Dealing
     | HitOrStand
@@ -148,8 +164,9 @@ initalState =
           }
         , []
         )
-    , state = ShuffleCards
+    , state = MainMenu
     , toast = Nothing
+    , highScore = Nothing
     }
 
 
@@ -175,16 +192,25 @@ withPlayers ( f, r ) ( model, effect ) =
     )
 
 
-init : ( Model, Effect )
-init =
-    ( initalState, ShuffleDeck_ (Deck.decks 4) )
+init : Flags -> ( Model, Effect )
+init flags =
+    ( { initalState | highScore = flags.highScore }, NoEffect )
 
 
-main : Program () Model Msg
+type alias Flags =
+    { highScore : Maybe Int
+    }
+
+
+main : Program Flags Model Msg
 main =
-    Browser.element
-        { init = \_ -> init |> Tuple.mapSecond perform
-        , view = \model -> view model
+    Browser.document
+        { init = init >> Tuple.mapSecond perform
+        , view =
+            \model ->
+                { title = "Black Jack"
+                , body = view model
+                }
         , update = \msg model -> update msg model |> Tuple.mapSecond perform
         , subscriptions = \_ -> Sub.none
         }
@@ -197,6 +223,9 @@ update msg model =
             model.players
     in
     case msg of
+        StartNewGame ->
+            ( { initalState | highScore = model.highScore }, ShuffleDeck_ (Deck.decks 4) )
+
         ShuffledDeck deck ->
             ( { model | deck = deck, state = Betting }, NoEffect )
 
@@ -516,11 +545,28 @@ update msg model =
                         )
                         players
                     )
+
+                noMoney =
+                    updatedPlayers |> Tuple.first |> .money |> (==) 0
             in
-            ( { model | players = updatedPlayers, state = ContinueToNextRound }, NoEffect )
+            ( { model
+                | players = updatedPlayers
+                , state =
+                    if noMoney then
+                        MainMenu
+
+                    else
+                        ContinueToNextRound
+              }
+            , NoEffect
+            )
+                |> withHighScore
                 |> withToast
                     (Just
-                        (if win < 0 then
+                        (if noMoney then
+                            "You lost the game!"
+
+                         else if win < 0 then
                             "You lost $" ++ String.fromInt (abs win) ++ "!"
 
                          else
@@ -536,7 +582,7 @@ update msg model =
                 newState =
                     initalState
             in
-            ( { newState | state = Betting, deck = model.deck, players = cleared }
+            ( { newState | state = Betting, deck = model.deck, highScore = model.highScore, players = cleared }
             , if List.length model.deck < 15 then
                 ShuffleDeck_ model.deck
 
@@ -552,24 +598,33 @@ update msg model =
 -- VIEWS
 
 
-view : Model -> Html.Html Msg
+view : Model -> List (Html.Html Msg)
 view model =
-    let
-        ( currentPlayer, _ ) =
-            model.players
-    in
-    Html.div []
-        ((if model.state /= Betting then
-            dealerView model.dealer model.state
-                :: List.map playerView (allPlayers model.players)
+    [ if model.state == MainMenu then
+        Html.div [ Html.Attributes.class "main-menu" ]
+            [ Html.h1 [] [ Html.text "BlackJack!" ]
+            , Html.p [] [ Html.text <| "Current high score: " ++ (model.highScore |> Maybe.map String.fromInt |> Maybe.map (\s -> "$" ++ s ++ "!") |> Maybe.withDefault "No high score yet!") ]
+            , Html.button [ Html.Events.onClick StartNewGame ] [ Html.text "Start new game!" ]
+            ]
 
-          else
-            [ Html.text "" ]
-         )
-            ++ [ actionsView model.state currentPlayer
-               , Maybe.map toastView model.toast |> Maybe.withDefault (Html.text "")
-               ]
-        )
+      else
+        let
+            ( currentPlayer, _ ) =
+                model.players
+        in
+        Html.div [ Html.Attributes.class "game" ]
+            ((if model.state /= Betting then
+                dealerView model.dealer model.state
+                    :: List.map playerView (allPlayers model.players)
+
+              else
+                [ Html.text "" ]
+             )
+                ++ [ actionsView model.state currentPlayer
+                   ]
+            )
+    , Maybe.map toastView model.toast |> Maybe.withDefault (Html.text "")
+    ]
 
 
 cardColorAndSuite : Card -> List (Html.Html msg)
@@ -657,6 +712,9 @@ actionsView state player =
     Html.div [ Html.Attributes.class "actions" ]
         [ Html.p [ Html.Attributes.class "player-money" ] [ Html.text ("$" ++ String.fromInt player.money) ]
         , case state of
+            MainMenu ->
+                Html.text ""
+
             Betting ->
                 bettingView player
 
@@ -785,3 +843,25 @@ withToast message ( model, effect ) =
 
         Nothing ->
             ( model, effect )
+
+
+withHighScore : ( Model, Effect ) -> ( Model, Effect )
+withHighScore ( model, effect ) =
+    let
+        playerMoney =
+            model.players |> Tuple.first |> .money
+    in
+    case ( playerMoney, model.highScore ) of
+        ( p, Just h ) ->
+            if p > h then
+                ( { model | highScore = Just p }, Multiple [ effect, UpdateHighScore p ] )
+
+            else
+                ( model, effect )
+
+        ( p, Nothing ) ->
+            if p > 0 then
+                ( { model | highScore = Just p }, Multiple [ effect, UpdateHighScore p ] )
+
+            else
+                ( model, effect )

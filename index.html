@@ -15,7 +15,29 @@
 	<pre id="elm"></pre>
 
 	<script>
-		Elm.Main.init({ node: document.getElementById("elm") })
+		const highScoreKey = "high-score"
+
+		const highScore = (() => {
+			const score = window.localStorage?.getItem(highScoreKey)
+			if (!score)
+				return null
+
+			const parsed = parseInt(score)
+			if (isNaN(parsed))
+				return null
+
+			return parsed
+		})()
+
+		const elm = Elm.Main.init({
+			node: document.getElementById("elm"), flags: {
+				highScore: highScore
+			}
+		})
+
+		elm.ports.updateHighScore.subscribe(highScore => {
+			window.localStorage?.setItem(highScoreKey, highScore)
+		})
 	</script>
 
 </body>

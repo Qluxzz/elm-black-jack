@@ -19,7 +19,7 @@ suite =
     describe "Game loop tests"
         [ test "Game loop works" <|
             \_ ->
-                start defaultSettings
+                start (defaultSettings |> withDeck (Deck.decks 4))
                     -- Betting alternatives
                     |> ProgramTest.ensureViewHas
                         [ Selector.exactText "$1"
@@ -281,6 +281,7 @@ suite =
                 start
                     (defaultSettings
                         |> withPlayers ( { money = 15 }, [] )
+                        |> withDeck []
                     )
                     |> ProgramTest.ensureViewHas
                         [ Selector.exactText "$15"
@@ -395,7 +396,7 @@ suite =
                         )
                     |> ProgramTest.clickButton "Hit"
                     |> ProgramTest.expectView (toastHasMessage "Bust!")
-        , describe "Deler"
+        , describe "Dealer"
             [ test "Dealer second card should be visible before taking third card" <|
                 \_ ->
                     start
@@ -444,6 +445,16 @@ suite =
                         |> ProgramTest.ensureView (dealerHasCards [ Card Card.Ace Card.Hearts, Card Card.Six Card.Spades ])
                         |> ProgramTest.advanceTime 1
                         |> ProgramTest.expectViewHas [ continueButton ]
+            ]
+        , describe "High score"
+            [ test "High score is printed in main menu" <|
+                \_ ->
+                    start (defaultSettings |> withHighScore 1337)
+                        |> ProgramTest.expectViewHas [ Selector.text "Current high score: $1337!" ]
+            , test "Default text if no high score yet" <|
+                \_ ->
+                    start defaultSettings
+                        |> ProgramTest.expectViewHas [ Selector.text "Current high score: No high score yet!" ]
             ]
         ]
 
@@ -573,6 +584,9 @@ simulateEffects delay effect =
             -- Set 1 here, so we need to manually advance the time to get rid of the toast
             SimulatedEffect.Process.sleep 1 |> SimulatedEffect.Task.perform (\_ -> Main.ClearToast)
 
+        Main.UpdateHighScore _ ->
+            SimulatedEffect.Cmd.none
+
         Main.Multiple effects ->
             SimulatedEffect.Cmd.batch (List.map (simulateEffects delay) effects)
 
@@ -581,6 +595,7 @@ type alias Settings =
     { deck : Maybe Deck.Deck
     , players : Maybe ( { money : Int }, List { money : Int } )
     , delay : Bool
+    , highScore : Maybe Int
     }
 
 
@@ -589,29 +604,35 @@ defaultSettings =
     { deck = Nothing
     , players = Just ( { money = 400 }, [] )
     , delay = False
+    , highScore = Nothing
     }
 
 
 withDeck : Deck.Deck -> Settings -> Settings
-withDeck d m =
-    { m | deck = Just d }
+withDeck d s =
+    { s | deck = Just d }
 
 
 withPlayers : ( { money : Int }, List { money : Int } ) -> Settings -> Settings
-withPlayers p m =
-    { m | players = Just p }
+withPlayers p s =
+    { s | players = Just p }
 
 
 {-| Makes it so all Process.sleep takes 1 instead of 0 so you can use ProgramTest.advanceTime to advance through the messages
 -}
 withDelay : Settings -> Settings
-withDelay m =
-    { m | delay = True }
+withDelay s =
+    { s | delay = True }
+
+
+withHighScore : Int -> Settings -> Settings
+withHighScore highScore s =
+    { s | highScore = Just highScore }
 
 
 start : Settings -> ProgramTest.ProgramTest Main.Model Main.Msg Main.Effect
 start settings =
-    ProgramTest.createElement
+    ProgramTest.createDocument
         { init =
             \_ ->
                 (case settings.deck of
@@ -619,7 +640,7 @@ start settings =
                         Main.initWithDeck d
 
                     Nothing ->
-                        Main.init
+                        Main.init { highScore = settings.highScore }
                 )
                     |> (\( model, effect ) ->
                             case settings.players of
@@ -631,7 +652,7 @@ start settings =
                                     ( model, effect )
                        )
         , update = Main.update
-        , view = Main.view
+        , view = \model -> { title = "Black Jack", body = Main.view model }
         }
         |> ProgramTest.withSimulatedEffects (simulateEffects settings.delay)
         |> ProgramTest.start ()

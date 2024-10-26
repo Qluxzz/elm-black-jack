@@ -69,6 +69,31 @@ body>div {
     justify-content: space-around;
 }
 
+.main-menu {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 20px;
+
+    &:before {
+        position: absolute;
+        top: -156px;
+        line-height: 1;
+        content: '♠';
+        color: var(--black-suite);
+        font-size: min(100vh, 100vw);
+        z-index: -1;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
 .actions {
     position: absolute;
     bottom: 0px;
