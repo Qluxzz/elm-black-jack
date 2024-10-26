@@ -103,6 +103,25 @@ body>div {
     &.busted {
         opacity: 0.1;
     }
+
+    /* Play splitting animation on the first card of the new hand */
+    /* TODO: This doesn't work when splitting two hands into three hands, the animation plays for the wrong hand */
+    &:not(:first-child)>.cards>.card:first-child>.card-inner {
+        top: 0;
+        animation: split-hand 600ms;
+    }
+}
+
+@keyframes split-hand {
+    from {
+        top: 0;
+        /* 20px is the gap between hands */
+        left: calc(-100% + 20px);
+    }
+
+    to {
+        left: 0;
+    }
 }
 
 .result {
@@ -283,7 +302,6 @@ body>div {
     bottom: 32px;
     transform: scale(1, -1);
 }
-
 
 .spades::before,
 .spades::after {
