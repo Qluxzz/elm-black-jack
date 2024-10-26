@@ -180,6 +180,12 @@ body>div {
 .dealer {
     height: 200px;
 
+    transition: opacity 500ms;
+
+    &.busted {
+        opacity: 0.1;
+    }
+
     /* Nested div for dealers second hidden card */
     .card-flip {
         position: absolute;

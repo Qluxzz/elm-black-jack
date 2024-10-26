@@ -610,7 +610,7 @@ dealerView dealer state =
         hideSecondCard =
             not <| List.member state [ DealerFinishes, Result, ContinueToNextRound ]
     in
-    Html.div [ Html.Attributes.class "dealer" ]
+    Html.div [ Html.Attributes.class "dealer", Html.Attributes.classList [ ( "busted", Cards.value dealer > 21 ) ] ]
         [ Html.div [ Html.Attributes.class "cards" ]
             (List.indexedMap
                 (\i -> hiddenCard (i == 1 && hideSecondCard))
