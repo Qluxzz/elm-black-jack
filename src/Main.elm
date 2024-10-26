@@ -265,12 +265,6 @@ update msg model =
             ( { model
                 | deck = deck
                 , players = updatedPlayers
-                , state =
-                    if allHandsHaveTwoCards then
-                        HitOrStand
-
-                    else
-                        model.state
               }
             , if allHandsHaveTwoCards then
                 DealerTakesCard_
