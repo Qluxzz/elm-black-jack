@@ -67,7 +67,6 @@ type Msg
     | Winnings
       -- Toast
     | ClearToast
-    | NoOp
 
 
 type Effect
@@ -198,9 +197,6 @@ update msg model =
             model.players
     in
     case msg of
-        NoOp ->
-            ( model, NoEffect )
-
         ShuffledDeck deck ->
             ( { model | deck = deck, state = Betting }, NoEffect )
 
@@ -703,18 +699,11 @@ bettingView { money } =
         ((markerAmounts
             |> List.map
                 (\amount ->
-                    Html.div
+                    Html.button
                         [ Html.Attributes.class "marker"
-                        , Html.Attributes.attribute "role" "button"
                         , Html.Attributes.class ("_" ++ String.fromInt amount)
-                        , Html.Attributes.classList [ ( "disabled", money < amount ) ]
-                        , Html.Events.onClick
-                            (if money < amount then
-                                NoOp
-
-                             else
-                                Bet amount
-                            )
+                        , Html.Attributes.disabled (money < amount)
+                        , Html.Events.onClick (Bet amount)
                         ]
                         [ Html.text ("$" ++ String.fromInt amount) ]
                 )

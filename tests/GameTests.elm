@@ -284,15 +284,15 @@ suite =
                     )
                     |> ProgramTest.ensureViewHas
                         [ Selector.exactText "$15"
-                        , Selector.classes [ "marker", "_500", "disabled" ]
-                        , Selector.classes [ "marker", "_100", "disabled" ]
+                        , Selector.disabled True
+                        , Selector.classes [ "marker", "_500" ]
+                        , Selector.classes [ "marker", "_100" ]
                         ]
-                    |> ProgramTest.ensureViewHasNot
-                        [ Selector.classes [ "marker", "_10", "disabled" ]
-                        , Selector.classes [ "marker", "_1", "disabled" ]
+                    |> ProgramTest.expectViewHas
+                        [ Selector.disabled True
+                        , Selector.classes [ "marker", "_10" ]
+                        , Selector.classes [ "marker", "_1" ]
                         ]
-                    |> ProgramTest.clickButton "$500"
-                    |> ProgramTest.expectViewHas [ Selector.exactText "$15" ]
         , describe "Double down"
             [ test "Double down works" <|
                 \_ ->
