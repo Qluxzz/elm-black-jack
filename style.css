@@ -76,13 +76,16 @@ body>div {
 
 .actions {
     position: absolute;
-    bottom: 20px;
+    bottom: 0px;
     left: 0;
     right: 0;
     justify-content: center;
     align-items: center;
     display: flex;
     gap: 10px;
+    height: 100px;
+    padding: 10px;
+    background-color: #083c01;
 }
 
 .hands {
@@ -161,6 +164,38 @@ body>div {
 
 .dealer {
     height: 200px;
+
+    /* Nested div for dealers second hidden card */
+    .card-flip {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+
+        transform-style: preserve-3d;
+        transition: transform 500ms;
+
+        &.hidden {
+            transform: rotateY(180deg);
+        }
+
+        >.card-front,
+        >.card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+
+            border-radius: 10px;
+            border: 1px solid black;
+            background-color: white;
+
+        }
+
+        >.card-back {
+            transform: rotateY(180deg);
+
+        }
+    }
 }
 
 /* CARDS */
@@ -203,35 +238,10 @@ body>div {
     font-variant-numeric: tabular-nums;
 }
 
-.card-flip {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-
-    transform-style: preserve-3d;
-    transition: transform 500ms;
-
-    &.hidden {
-        transform: rotateY(180deg);
-    }
-
-    >.card-front,
-    >.card-back {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        backface-visibility: hidden;
-
-        border-radius: 10px;
-        border: 1px solid black;
-        background-color: white;
-
-    }
-
-    >.card-back {
-        transform: rotateY(180deg);
-
-    }
+.player .card-inner {
+    border-radius: 10px;
+    border: 1px solid black;
+    background-color: white;
 }
 
 

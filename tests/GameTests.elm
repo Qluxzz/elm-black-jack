@@ -345,7 +345,7 @@ suite =
                         |> ProgramTest.advanceTime 4
                         |> ProgramTest.clickButton "Double down"
                         |> ProgramTest.ensureView (playerHasMoney 0)
-                        |> ProgramTest.advanceTime 5
+                        |> ProgramTest.advanceTime 6
                         |> ProgramTest.expectViewHas [ continueButton ]
             , test "Show toast if bust when doubling down" <|
                 \_ ->
@@ -413,8 +413,12 @@ suite =
                         |> ProgramTest.advanceTime 3
                         |> ProgramTest.ensureView (toastHasMessage "Black Jack!")
                         -- Make the dealer take the last card
-                        |> ProgramTest.advanceTime 1
-                        |> ProgramTest.expectView (dealerHasCards [ Card Card.Four Card.Spades, Card Card.Three Card.Hearts ])
+                        |> ProgramTest.advanceTime 2
+                        |> ProgramTest.ensureView (dealerHasCards [ Card Card.Four Card.Spades, Card Card.Three Card.Hearts ])
+                        |> ProgramTest.advanceTime 3
+                        |> ProgramTest.ensureView (toastHasMessage "You won $300!")
+                        |> ProgramTest.ensureView (dealerHasCards [ Card Card.Four Card.Spades, Card Card.Three Card.Hearts ])
+                        |> ProgramTest.expectViewHas [ continueButton ]
             , test "Dealer stands on soft 17" <|
                 \_ ->
                     start
@@ -437,6 +441,7 @@ suite =
                         |> ProgramTest.clickButton "Stand"
                         |> ProgramTest.advanceTime 1
                         |> ProgramTest.ensureView (dealerHasCards [ Card Card.Ace Card.Hearts, Card Card.Six Card.Spades ])
+                        |> ProgramTest.advanceTime 1
                         |> ProgramTest.expectViewHas [ continueButton ]
             ]
         ]

@@ -106,7 +106,7 @@ perform effect =
             Process.sleep 1000 |> Task.perform (\_ -> DealerFinish)
 
         Winnings_ ->
-            Process.sleep 0 |> Task.perform (\_ -> Winnings)
+            Process.sleep 1000 |> Task.perform (\_ -> Winnings)
 
         ClearToast_ ->
             Process.sleep 2000 |> Task.perform (\_ -> ClearToast)
@@ -135,6 +135,7 @@ type GameState
     | HitOrStand
     | DealerFinishes
     | Result
+    | ContinueToNextRound
 
 
 initalState : Model
@@ -295,24 +296,18 @@ update msg model =
 
                 hasTwoCards =
                     List.length updatedHand == 2
-
-                allPlayersStandingOrBusted_ =
-                    allPlayersStandingOrBusted model.players
             in
             ( { model
                 | dealer = updatedHand
                 , state =
-                    if allPlayersStandingOrBusted_ then
-                        DealerFinishes
-
-                    else if hasTwoCards then
+                    if hasTwoCards then
                         HitOrStand
 
                     else
                         model.state
                 , deck = deck
               }
-            , if allPlayersStandingOrBusted_ then
+            , if allPlayersStandingOrBusted model.players then
                 DealerFinish_
 
               else if hasTwoCards then
@@ -349,9 +344,6 @@ update msg model =
                 updatedPlayers =
                     ( updatedPlayer, players )
 
-                allPlayersStandingOrBusted_ =
-                    allPlayersStandingOrBusted updatedPlayers
-
                 nextHandHasTwoCards =
                     updatedPlayer.hands |> Tuple.first |> (\h -> List.length h.cards >= 2)
             in
@@ -359,7 +351,7 @@ update msg model =
                 | deck = deck
                 , players = updatedPlayers
               }
-            , if allPlayersStandingOrBusted_ then
+            , if allPlayersStandingOrBusted updatedPlayers then
                 DealerFinish_
 
               else if not nextHandHasTwoCards then
@@ -385,12 +377,9 @@ update msg model =
 
                 updatedPlayers =
                     ( updatedPlayer, players )
-
-                allPlayersStandingOrBusted_ =
-                    allPlayersStandingOrBusted updatedPlayers
             in
-            ( { model | players = ( updatedPlayer, Tuple.second model.players ) }
-            , if allPlayersStandingOrBusted_ then
+            ( { model | players = updatedPlayers }
+            , if allPlayersStandingOrBusted updatedPlayers then
                 DealerFinish_
 
               else if not nextHandHasTwoCards then
@@ -475,12 +464,6 @@ update msg model =
             ( { model
                 | players = updatedPlayers
                 , deck = deck
-                , state =
-                    if allPlayersStandingOrBusted_ then
-                        DealerFinishes
-
-                    else
-                        model.state
               }
             , if allPlayersStandingOrBusted_ then
                 DealerFinish_
@@ -536,7 +519,7 @@ update msg model =
                         players
                     )
             in
-            ( { model | players = updatedPlayers }, NoEffect )
+            ( { model | players = updatedPlayers, state = ContinueToNextRound }, NoEffect )
                 |> withToast
                     (Just
                         (if win < 0 then
@@ -591,31 +574,48 @@ view model =
         )
 
 
-cardView : Bool -> Card -> Html.Html msg
-cardView hidden card =
-    Html.div [ Html.Attributes.class "card", Html.Attributes.attribute "test-id" (Card.toString card) ]
-        [ Html.div [ Html.Attributes.class "card-inner" ]
-            [ Html.div [ Html.Attributes.class "card-flip", Html.Attributes.classList [ ( "hidden", hidden ) ] ]
-                [ Html.div [ Html.Attributes.class "card-front" ]
-                    [ Html.div [ Html.Attributes.class "color", Html.Attributes.class (Card.suiteToCssClass card) ] []
-                    , Html.div [ Html.Attributes.class "value", Html.Attributes.class (Card.valueToCssClass card) ] []
-                    ]
-                , Html.div [ Html.Attributes.class "card-back" ] []
-                ]
+cardColorAndSuite : Card -> List (Html.Html msg)
+cardColorAndSuite card =
+    [ Html.div [ Html.Attributes.class "color", Html.Attributes.class (Card.suiteToCssClass card) ] []
+    , Html.div [ Html.Attributes.class "value", Html.Attributes.class (Card.valueToCssClass card) ] []
+    ]
+
+
+hiddenCard : Bool -> Card -> Html.Html msg
+hiddenCard hidden card =
+    cardView_
+        [ Html.div [ Html.Attributes.class "card-flip", Html.Attributes.classList [ ( "hidden", hidden ) ] ]
+            [ Html.div [ Html.Attributes.class "card-front" ]
+                (cardColorAndSuite card)
+            , Html.div [ Html.Attributes.class "card-back" ] []
             ]
         ]
+        card
+
+
+cardView_ : List (Html.Html msg) -> Card -> Html.Html msg
+cardView_ children card =
+    Html.div [ Html.Attributes.class "card", Html.Attributes.attribute "test-id" (Card.toString card) ]
+        [ Html.div [ Html.Attributes.class "card-inner" ]
+            children
+        ]
+
+
+cardView : Card -> Html.Html msg
+cardView card =
+    cardView_ (cardColorAndSuite card) card
 
 
 dealerView : Dealer -> GameState -> Html.Html Msg
 dealerView dealer state =
     let
         hideSecondCard =
-            not <| List.member state [ DealerFinishes, Result ]
+            not <| List.member state [ DealerFinishes, Result, ContinueToNextRound ]
     in
     Html.div [ Html.Attributes.class "dealer" ]
         [ Html.div [ Html.Attributes.class "cards" ]
             (List.indexedMap
-                (\i -> cardView (i == 1 && hideSecondCard))
+                (\i -> hiddenCard (i == 1 && hideSecondCard))
                 dealer
             )
         ]
@@ -632,40 +632,24 @@ playerView player =
             ((activeHand :: otherHands)
                 |> List.sortBy .order
                 |> List.map
-                    (\hand ->
-                        (if hand.order == activeHand.order then
-                            activeHandView
-
-                         else
-                            inactiveHandView
-                        )
+                    (\({ state } as hand) ->
+                        handView
+                            [ Html.Attributes.classList
+                                [ ( "active", state == Player.Playing && hand.order == activeHand.order )
+                                , ( "busted", state == Player.Busted )
+                                ]
+                            ]
                             hand
                     )
             )
         ]
 
 
-inactiveHandView : Player.Hand -> Html.Html msg
-inactiveHandView =
-    handView []
-
-
-activeHandView : Player.Hand -> Html.Html Msg
-activeHandView ({ state } as hand) =
-    handView
-        [ Html.Attributes.classList
-            [ ( "active", state == Player.Playing )
-            , ( "busted", state == Player.Busted )
-            ]
-        ]
-        hand
-
-
 handView : List (Html.Attribute msg) -> Player.Hand -> Html.Html msg
 handView attributes { cards, bet } =
     Html.div (Html.Attributes.class "hand" :: attributes)
         [ Html.div [ Html.Attributes.class "cards" ]
-            (List.map (cardView False) cards)
+            (List.map cardView cards)
         , Html.p [] [ Html.text ("$" ++ String.fromInt bet) ]
         ]
 
@@ -691,6 +675,9 @@ actionsView state player =
                 Html.text ""
 
             Result ->
+                Html.text ""
+
+            ContinueToNextRound ->
                 Html.button [ Html.Events.onClick NextRound ] [ Html.text "Continue?" ]
         ]
 
@@ -706,7 +693,11 @@ bettingView { money } =
                 |> Maybe.map (\v -> money > v)
                 |> Maybe.withDefault False
     in
-    Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
+    Html.div
+        [ Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "gap" "10px"
+        , Html.Attributes.style "align-items" "center"
+        ]
         ((markerAmounts
             |> List.map
                 (\amount ->
