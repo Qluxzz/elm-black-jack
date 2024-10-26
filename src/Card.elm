@@ -32,7 +32,7 @@ type alias Card =
 
 type CardValue
     = Single Int
-    | Double Int Int
+    | Double Int Int -- Low value, High Value
 
 
 value : Card -> CardValue

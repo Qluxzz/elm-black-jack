@@ -78,7 +78,7 @@ addCards cards =
             { h
                 | cards = newCards
                 , state =
-                    case Basics.compare (Cards.largestValue newCards) 21 of
+                    case Basics.compare (Cards.value newCards) 21 of
                         GT ->
                             Busted
 
@@ -115,7 +115,7 @@ calculateWinnings : List Card.Card -> Player -> Int
 calculateWinnings dealerHand { hands } =
     let
         dealerHandValue =
-            Cards.largestValue dealerHand
+            Cards.value dealerHand
     in
     List.foldr
         (\{ cards, bet, state } acc ->
@@ -137,7 +137,7 @@ calculateWinnings dealerHand { hands } =
                 acc + bet * 2
 
             else
-                case Basics.compare (Cards.largestValue cards) dealerHandValue of
+                case Basics.compare (Cards.value cards) dealerHandValue of
                     GT ->
                         -- You won over the dealer, you get 2x your bet back
                         acc + bet * 2

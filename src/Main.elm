@@ -319,7 +319,7 @@ update msg model =
                         |> Player.addCards cards
                         |> Player.addToastIfCurrentHandHas
                             (\h ->
-                                case ( Basics.compare (Cards.largestValue h.cards) 21, List.length h.cards ) of
+                                case ( Basics.compare (Cards.value h.cards) 21, List.length h.cards ) of
                                     ( GT, _ ) ->
                                         Just "Bust!"
 
@@ -443,7 +443,7 @@ update msg model =
                             )
                         |> Player.addToastIfCurrentHandHas
                             (\h ->
-                                if Cards.largestValue h.cards > 21 then
+                                if Cards.value h.cards > 21 then
                                     Just "Bust!"
 
                                 else
@@ -481,7 +481,7 @@ update msg model =
         DealerFinish ->
             let
                 dealerHandValue =
-                    model.dealer |> Cards.largestValue
+                    model.dealer |> Cards.value
 
                 dealerHasReachedLimit =
                     dealerHandValue >= 17

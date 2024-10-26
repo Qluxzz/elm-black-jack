@@ -1,43 +1,48 @@
-module Cards exposing (canSplit, comp, hasBlackJack, largestValue, toString)
+module Cards exposing (canSplit, comp, hasBlackJack, toString, value)
 
 import Card
 
 
-{-| Get the value of a list of cards. A tuple is returned since Aces are worth 1/11. The first item of the tuple is counting the Ace as 1, the other as 11
+{-| Get the highest valid value of the cards
 -}
-value : List Card.Card -> ( Int, Int )
+value : List Card.Card -> Int
 value cards =
-    List.foldl
-        (\card ( low, high ) ->
-            case Card.value card of
-                Card.Single v ->
-                    ( low + v, high + v )
-
-                Card.Double v1 v2 ->
-                    ( low + v1, high + v2 )
-        )
-        ( 0, 0 )
-        cards
-
-
-{-| Aces are counted as 1/11 so if counting aces as 11 gives us a value over 21 (bust), then return value where we count aces as 1 instead
--}
-largestValue : List Card.Card -> Int
-largestValue cards =
     let
-        ( low, high ) =
-            value cards
-    in
-    if high > 21 then
-        low
+        -- Sum the cards without double value first
+        nonAcesSum =
+            List.foldr
+                (\card acc ->
+                    case Card.value card of
+                        Card.Single v ->
+                            acc + v
 
-    else
-        high
+                        _ ->
+                            acc
+                )
+                0
+                cards
+    in
+    -- Add the aces as 1/11 depending on what works without busting the hand
+    List.foldr
+        (\card acc ->
+            case Card.value card of
+                Card.Double low high ->
+                    if acc + high > 21 then
+                        acc + low
+
+                    else
+                        acc + high
+
+                _ ->
+                    acc
+        )
+        nonAcesSum
+        cards
 
 
 comp : List Card.Card -> List Card.Card -> Order
 comp a b =
-    Basics.compare (largestValue a) (largestValue b)
+    Basics.compare (value a) (value b)
 
 
 toString : List Card.Card -> String
@@ -57,4 +62,4 @@ canSplit cards =
 
 hasBlackJack : List Card.Card -> Bool
 hasBlackJack cards =
-    List.length cards == 2 && largestValue cards == 21
+    List.length cards == 2 && value cards == 21
