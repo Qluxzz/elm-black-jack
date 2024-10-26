@@ -51,11 +51,6 @@ h6 {
     overflow-wrap: break-word;
 }
 
-#root,
-#__next {
-    isolation: isolate;
-}
-
 /* End of CSS Reset */
 
 /* Write code here */
