@@ -164,14 +164,19 @@ button {
     background-color: #fff;
     cursor: pointer;
     font-weight: bold;
+    min-width: 10ch;
     color: #000;
     font-size: 20px;
     white-space: nowrap;
 
     &:disabled {
         opacity: 0.5;
-        cursor: none;
+        cursor: not-allowed;
     }
+}
+
+.player-money {
+    white-space: nowrap;
 }
 
 .dealer-and-players {
@@ -185,13 +190,17 @@ button {
 
 .hit-or-stand {
     display: flex;
-    width: 100%;
+
     flex-wrap: wrap;
     justify-content: center;
     gap: 10px;
 
-    button {
-        flex-grow: 1;
+    @media (max-width: 520px) {
+        width: 100%;
+
+        button {
+            flex-grow: 1;
+        }
     }
 }
 
@@ -611,14 +620,14 @@ button {
     transition: transform 200ms;
     font-size: 17px;
 
-    &:hover {
+    &:hover:not(:disabled) {
         opacity: 1;
         transform: translateY(-10px);
     }
 
     &:disabled {
         filter: opacity(0.2);
-        pointer-events: none;
+        cursor: not-allowed;
     }
 
     /* Values */
