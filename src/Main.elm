@@ -209,7 +209,7 @@ main =
         { init = init >> Tuple.mapSecond perform
         , view =
             \model ->
-                { title = "Black Jack"
+                { title = "♦♣ Blackjack ♥♠"
                 , body = view model
                 }
         , update = \msg model -> update msg model |> Tuple.mapSecond perform
