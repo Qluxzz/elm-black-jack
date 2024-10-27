@@ -391,7 +391,10 @@ button {
 
 .card {
     aspect-ratio: 2.25 / 3.5;
-    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+    max-height: 155px;
+    min-height: 155px;
     position: relative;
     perspective: 1000px;
 }
