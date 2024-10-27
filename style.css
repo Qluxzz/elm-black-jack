@@ -83,7 +83,7 @@ h6 {
 .logo {
     display: flex;
 
-    @media (max-width: 500px) {
+    @media (max-width: 550px) {
         margin-left: 50px;
 
         .card:not(:first-child) {
@@ -195,7 +195,7 @@ button {
     justify-content: center;
     gap: 10px;
 
-    @media (max-width: 520px) {
+    @media (max-width: 550px) {
         width: 100%;
 
         button {
@@ -227,7 +227,7 @@ button {
     width: 100%;
     flex-direction: column;
 
-    @media (min-width: 500px) {
+    @media (min-width: 551px) {
         flex-direction: row;
     }
 }
