@@ -15,28 +15,25 @@
 <body>
 	<pre id="elm"></pre>
 	<script>
-		const highScoreKey = "high-score"
+		const statisticsKey = "statistics-v1"
 
-		const highScore = (() => {
-			const score = window.localStorage?.getItem(highScoreKey)
-			if (!score)
+		const statistics = (() => {
+			const statistics = window.localStorage?.getItem(statisticsKey)
+
+			if (!statistics)
 				return null
 
-			const parsed = parseInt(score)
-			if (isNaN(parsed))
-				return null
-
-			return parsed
+			return JSON.parse(statistics)
 		})()
 
 		const elm = Elm.Main.init({
 			node: document.getElementById("elm"), flags: {
-				highScore: highScore
+				statistics: statistics
 			}
 		})
 
-		elm.ports.updateHighScore.subscribe(highScore => {
-			window.localStorage?.setItem(highScoreKey, highScore)
+		elm.ports.updateStatistics.subscribe(statistics => {
+			window.localStorage?.setItem(statisticsKey, JSON.stringify(statistics))
 		})
 	</script>
 

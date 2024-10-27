@@ -78,6 +78,48 @@ h6 {
     flex-direction: column;
     flex-grow: 1;
     gap: 20px;
+    padding: 10px;
+
+    .menu-items {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+.statistics {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .inner {
+        margin: 10px;
+        background-color: #fff;
+        border: 1px solid black;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        color: black;
+        padding: 10px;
+    }
+
+    dl {
+        list-style: symbols(cyclic "♦" "♣" "♥" "♠");
+        list-style-position: inside;
+        padding-left: 0;
+    }
+
+    dt {
+        white-space: nowrap;
+    }
+
+    dd {
+        padding-left: 10px;
+        font-style: italic;
+    }
 }
 
 .logo {

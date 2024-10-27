@@ -448,15 +448,188 @@ suite =
                         |> ProgramTest.advanceTime 1
                         |> ProgramTest.expectViewHas [ continueButton ]
             ]
-        , describe "High score"
-            [ test "High score is printed in main menu" <|
+        , describe "Statistics"
+            [ test "Statistics is updated as expected" <|
                 \_ ->
-                    start (defaultSettings |> withHighScore 1337)
-                        |> ProgramTest.expectViewHas [ Selector.text "Current high score: $1337!" ]
-            , test "Default text if no high score yet" <|
+                    start
+                        (defaultSettings
+                            |> withDeck [ Card.Card Card.Ace Card.Spades, Card.Card Card.Ten Card.Clubs, Card.Card Card.King Card.Diamonds, Card.Card Card.Seven Card.Hearts ]
+                        )
+                        |> clickMarker 100
+                        |> ProgramTest.clickButton "Quit?"
+                        |> ProgramTest.clickButton "Statistics"
+                        |> ProgramTest.expectViewHas
+                            [ Selector.exactText "Rounds played: 1"
+                            , Selector.exactText "Hands won: 1"
+                            , Selector.exactText "Hands lost: 0"
+                            , Selector.exactText "Win rate: 100%"
+                            , Selector.exactText "Blackjack: 1"
+                            , Selector.exactText "Blackjack push: 0"
+                            , Selector.exactText "Double down: 0"
+                            , Selector.exactText "Biggest hand won: $300"
+                            , Selector.exactText "Biggest hand lost: $0"
+                            , Selector.exactText "Most hands in a round: 1"
+                            ]
+            , test "Splitting is counted correctly in statistics" <|
                 \_ ->
-                    start defaultSettings
-                        |> ProgramTest.expectViewHas [ Selector.text "Current high score: No high score yet!" ]
+                    start
+                        (defaultSettings
+                            |> withDeck
+                                [ Card.Card Card.Ace Card.Spades
+                                , Card.Card Card.Ten Card.Clubs
+                                , Card.Card Card.Ace Card.Diamonds
+                                , Card.Card Card.Seven Card.Hearts
+                                , Card.Card Card.King Card.Clubs
+                                , Card.Card Card.Queen Card.Diamonds
+                                ]
+                        )
+                        |> clickMarker 100
+                        |> ProgramTest.clickButton "Split"
+                        |> ProgramTest.clickButton "Quit?"
+                        |> ProgramTest.clickButton "Statistics"
+                        |> ProgramTest.expectViewHas
+                            [ Selector.exactText "Rounds played: 1"
+                            , Selector.exactText "Hands won: 2"
+                            , Selector.exactText "Hands lost: 0"
+                            , Selector.exactText "Win rate: 100%"
+                            , Selector.exactText "Blackjack: 2"
+                            , Selector.exactText "Blackjack push: 0"
+                            , Selector.exactText "Double down: 0"
+                            , Selector.exactText "Biggest hand won: $300"
+                            , Selector.exactText "Biggest hand lost: $0"
+                            , Selector.exactText "Most hands in a round: 2"
+                            ]
+            , test "Double down is counted correctly in statistics" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck
+                                [ Card.Card Card.Three Card.Spades
+                                , Card.Card Card.Ten Card.Clubs
+                                , Card.Card Card.Seven Card.Diamonds
+                                , Card.Card Card.Seven Card.Hearts
+                                , Card.Card Card.King Card.Clubs
+                                ]
+                        )
+                        |> clickMarker 100
+                        |> ProgramTest.clickButton "Double down"
+                        |> ProgramTest.clickButton "Quit?"
+                        |> ProgramTest.clickButton "Statistics"
+                        |> ProgramTest.expectViewHas
+                            [ Selector.exactText "Rounds played: 1"
+                            , Selector.exactText "Hands won: 1"
+                            , Selector.exactText "Hands lost: 0"
+                            , Selector.exactText "Win rate: 100%"
+                            , Selector.exactText "Blackjack: 0"
+                            , Selector.exactText "Blackjack push: 0"
+                            , Selector.exactText "Double down: 1"
+                            , Selector.exactText "Biggest hand won: $400"
+                            , Selector.exactText "Biggest hand lost: $0"
+                            , Selector.exactText "Most hands in a round: 1"
+                            ]
+            , test "Blackjack push is counted correctly in statistics" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck
+                                [ Card.Card Card.Ace Card.Spades
+                                , Card.Card Card.Ace Card.Clubs
+                                , Card.Card Card.King Card.Diamonds
+                                , Card.Card Card.King Card.Clubs
+                                ]
+                        )
+                        |> clickMarker 100
+                        |> ProgramTest.clickButton "Quit?"
+                        |> ProgramTest.clickButton "Statistics"
+                        |> ProgramTest.expectViewHas
+                            [ Selector.exactText "Rounds played: 1"
+                            , Selector.exactText "Hands won: 0"
+                            , Selector.exactText "Hands lost: 0"
+                            , Selector.exactText "Win rate: 0%"
+                            , Selector.exactText "Blackjack: 1"
+                            , Selector.exactText "Blackjack push: 1"
+                            , Selector.exactText "Push: 0"
+                            , Selector.exactText "Double down: 0"
+                            , Selector.exactText "Biggest hand won: $100"
+                            , Selector.exactText "Biggest hand lost: $0"
+                            , Selector.exactText "Most hands in a round: 1"
+                            ]
+            , test "Push is counted correctly in statistics" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck
+                                [ Card.Card Card.Ten Card.Spades
+                                , Card.Card Card.Ten Card.Clubs
+                                , Card.Card Card.Ten Card.Diamonds
+                                , Card.Card Card.Ten Card.Clubs
+                                ]
+                        )
+                        |> clickMarker 100
+                        |> ProgramTest.clickButton "Stand"
+                        |> ProgramTest.clickButton "Quit?"
+                        |> ProgramTest.clickButton "Statistics"
+                        |> ProgramTest.expectViewHas
+                            [ Selector.exactText "Rounds played: 1"
+                            , Selector.exactText "Hands won: 0"
+                            , Selector.exactText "Hands lost: 0"
+                            , Selector.exactText "Win rate: 0%"
+                            , Selector.exactText "Blackjack: 0"
+                            , Selector.exactText "Blackjack push: 0"
+                            , Selector.exactText "Push: 1"
+                            , Selector.exactText "Double down: 0"
+                            , Selector.exactText "Biggest hand won: $100"
+                            , Selector.exactText "Biggest hand lost: $0"
+                            , Selector.exactText "Most hands in a round: 1"
+                            ]
+            , test "Statistics is persisted over multiple rounds" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck
+                                [ Card.Card Card.King Card.Spades
+                                , Card.Card Card.Ten Card.Clubs
+                                , Card.Card Card.King Card.Diamonds
+                                , Card.Card Card.Seven Card.Hearts
+
+                                -- End of round one
+                                , Card.Card Card.Five Card.Diamonds
+                                , Card.Card Card.Ace Card.Hearts
+                                , Card.Card Card.Ten Card.Spades
+                                , Card.Card Card.Jack Card.Clubs
+                                ]
+                        )
+                        |> clickMarker 100
+                        |> ProgramTest.clickButton "Stand"
+                        |> ProgramTest.clickButton "Continue?"
+                        |> clickMarker 100
+                        |> ProgramTest.clickButton "Stand"
+                        |> ProgramTest.clickButton "Quit?"
+                        |> ProgramTest.clickButton "Statistics"
+                        |> ProgramTest.expectViewHas
+                            [ Selector.exactText "Rounds played: 2"
+                            , Selector.exactText "Hands won: 1"
+                            , Selector.exactText "Hands lost: 1"
+                            , Selector.exactText "Win rate: 50%"
+                            , Selector.exactText "Blackjack: 0"
+                            , Selector.exactText "Blackjack push: 0"
+                            , Selector.exactText "Double down: 0"
+                            , Selector.exactText "Biggest hand won: $200"
+                            , Selector.exactText "Biggest hand lost: $100"
+                            , Selector.exactText "Most hands in a round: 1"
+                            ]
+            , test "Most player money in a game is updated correctly" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck [ Card.Card Card.Ace Card.Spades, Card.Card Card.Ten Card.Clubs, Card.Card Card.King Card.Diamonds, Card.Card Card.Seven Card.Hearts ]
+                        )
+                        |> clickMarker 100
+                        |> ProgramTest.clickButton "Quit?"
+                        |> ProgramTest.clickButton "Statistics"
+                        |> ProgramTest.expectViewHas
+                            [ Selector.exactText "Highest balance: $600"
+                            ]
             ]
         ]
 
@@ -495,7 +668,7 @@ playerHasMoney : Int -> Query.Single msg -> Expect.Expectation
 playerHasMoney amount query =
     query
         |> Query.find [ Selector.class "player-money" ]
-        |> Query.has [ Selector.exactText ("Balance: " ++ toDollars amount) ]
+        |> Query.has [ Selector.exactText ("Balance: " ++ Main.toDollars amount) ]
 
 
 handHasBet : Int -> Int -> Query.Single msg -> Expect.Expectation
@@ -503,7 +676,7 @@ handHasBet index amount query =
     query
         |> playerHands
         |> Query.index index
-        |> Query.has [ Selector.exactText (toDollars amount) ]
+        |> Query.has [ Selector.exactText (Main.toDollars amount) ]
 
 
 handHasBusted : Int -> Query.Single msg -> Expect.Expectation
@@ -539,11 +712,6 @@ dealerHasCards cards query =
 
 
 -- Helpers
-
-
-toDollars : Int -> String
-toDollars amount =
-    "$" ++ String.fromInt amount
 
 
 simulateEffects : Bool -> Main.Effect -> ProgramTest.SimulatedEffect Main.Msg
@@ -586,7 +754,7 @@ simulateEffects delay effect =
             -- Set 1 here, so we need to manually advance the time to get rid of the toast
             SimulatedEffect.Process.sleep 1 |> SimulatedEffect.Task.perform (\_ -> Main.ClearToast)
 
-        Main.UpdateHighScore _ ->
+        Main.UpdateStatistics _ ->
             SimulatedEffect.Cmd.none
 
         Main.Multiple effects ->
@@ -598,6 +766,7 @@ type alias Settings =
     , players : Maybe ( { money : Int }, List { money : Int } )
     , delay : Bool
     , highScore : Maybe Int
+    , statistics : Maybe Main.Statistics
     }
 
 
@@ -607,6 +776,7 @@ defaultSettings =
     , players = Just ( { money = 400 }, [] )
     , delay = False
     , highScore = Nothing
+    , statistics = Nothing
     }
 
 
@@ -627,11 +797,6 @@ withDelay s =
     { s | delay = True }
 
 
-withHighScore : Int -> Settings -> Settings
-withHighScore highScore s =
-    { s | highScore = Just highScore }
-
-
 start : Settings -> ProgramTest.ProgramTest Main.Model Main.Msg Main.Effect
 start settings =
     ProgramTest.createDocument
@@ -642,7 +807,9 @@ start settings =
                         Main.initWithDeck d
 
                     Nothing ->
-                        Main.init { highScore = settings.highScore }
+                        Main.init
+                            { statistics = settings.statistics
+                            }
                 )
                     |> (\( model, effect ) ->
                             case settings.players of
@@ -680,5 +847,10 @@ start settings =
 clickMarker : Int -> ProgramTest.ProgramTest model msg effect -> ProgramTest.ProgramTest model msg effect
 clickMarker amount =
     ProgramTest.simulateDomEvent
-        (Query.find [ Selector.tag "button", Selector.classes [ "marker", "_" ++ String.fromInt amount ] ])
+        (Query.find
+            [ Selector.tag "button"
+            , Selector.disabled False
+            , Selector.classes [ "marker", "_" ++ String.fromInt amount ]
+            ]
+        )
         Test.Html.Event.click

@@ -111,47 +111,67 @@ next ( current, rest ) =
             ( current, rest )
 
 
-calculateWinnings : List Card.Card -> Player -> Int
-calculateWinnings dealerHand { hands } =
+type HandResult
+    = Lost
+    | Won
+    | Push
+    | Blackjack
+    | BlackjackPush
+
+
+calculateHandsState : List Card.Card -> Player -> List HandResult
+calculateHandsState dealerHand { hands } =
     let
         dealerHandValue =
             Cards.value dealerHand
     in
-    List.foldr
-        (\{ cards, bet, state } acc ->
+    List.map
+        (\{ cards, state } ->
             if state == Busted then
                 -- You busted, no win
-                acc - bet
+                Lost
 
             else if Cards.hasBlackJack cards then
                 if Cards.hasBlackJack dealerHand then
-                    -- Push
-                    acc + bet
+                    BlackjackPush
 
                 else
-                    -- Black Jack, pays 3 to 2
-                    acc + bet * 3
+                    Blackjack
 
             else if dealerHandValue > 21 then
-                -- Dealer busted, automatic win
-                acc + bet * 2
+                Won
 
             else
                 case Basics.compare (Cards.value cards) dealerHandValue of
                     GT ->
-                        -- You won over the dealer, you get 2x your bet back
-                        acc + bet * 2
+                        Won
 
                     EQ ->
-                        -- Push, you get your inital bet back
-                        acc + bet
+                        Push
 
                     LT ->
-                        -- You lost to the dealer
-                        acc - bet
+                        Lost
         )
-        0
         (playerHands hands)
+
+
+calculateWinnings : Int -> HandResult -> Int
+calculateWinnings bet state =
+    case state of
+        Lost ->
+            -bet
+
+        Push ->
+            bet
+
+        BlackjackPush ->
+            bet
+
+        Won ->
+            bet * 2
+
+        Blackjack ->
+            bet * 3
 
 
 playerHands : ( Hand, List Hand ) -> List Hand

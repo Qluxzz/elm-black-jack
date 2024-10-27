@@ -242,7 +242,15 @@ suite =
             (\{ hands, dealerHand, expectedWinnings } ->
                 test ("Player hands: " ++ String.join ", " (List.map (.cards >> Cards.toString) (Tuple.first hands :: Tuple.second hands)) ++ ", Dealer hand " ++ Cards.toString dealerHand ++ " = " ++ String.fromInt expectedWinnings) <|
                     \_ ->
-                        Player.calculateWinnings dealerHand (Player.Player hands 0 0)
+                        List.map2
+                            Tuple.pair
+                            (Player.calculateHandsState dealerHand (Player.Player hands 0 0))
+                            (Player.playerHands hands)
+                            |> List.foldr
+                                (\( state, { bet } ) acc ->
+                                    acc + Player.calculateWinnings bet state
+                                )
+                                0
                             |> Expect.equal expectedWinnings
             )
             cases
