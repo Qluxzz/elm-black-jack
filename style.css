@@ -162,6 +162,8 @@ h6 {
     flex-direction: column;
     flex-grow: 1;
     justify-content: space-around;
+    align-items: center;
+    width: 100%;
 }
 
 .actions {
