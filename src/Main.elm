@@ -610,16 +610,16 @@ view model =
                 model.players
         in
         Html.div [ Html.Attributes.class "game" ]
-            ((if model.state /= Betting then
-                dealerView model.dealer model.state
-                    :: List.map playerView (allPlayers model.players)
+            [ Html.div [ Html.Attributes.class "dealer-and-players" ]
+                (if model.state /= Betting then
+                    dealerView model.dealer model.state
+                        :: List.map playerView (allPlayers model.players)
 
-              else
-                [ Html.text "" ]
-             )
-                ++ [ actionsView model.state currentPlayer
-                   ]
-            )
+                 else
+                    [ Html.text "" ]
+                )
+            , actionsView model.state currentPlayer
+            ]
     , Maybe.map toastView model.toast |> Maybe.withDefault (Html.text "")
     ]
 
