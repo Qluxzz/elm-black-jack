@@ -10,6 +10,7 @@ import SimulatedEffect.Cmd
 import SimulatedEffect.Process
 import SimulatedEffect.Task
 import Test exposing (describe, test)
+import Test.Html.Event
 import Test.Html.Query as Query
 import Test.Html.Selector as Selector
 
@@ -26,8 +27,9 @@ suite =
                         , Selector.exactText "$10"
                         , Selector.exactText "$100"
                         , Selector.exactText "$500"
+                        , Selector.exactText "$1000"
                         ]
-                    |> ProgramTest.clickButton "$100"
+                    |> clickMarker 100
                     -- Validate that the user has the expected cards
                     |> ProgramTest.ensureView
                         (handHasCards 0 [ Card Card.Ace Card.Spades, Card Card.Three Card.Spades ])
@@ -48,7 +50,7 @@ suite =
                     |> ProgramTest.ensureView (playerHasMoney 400)
                     -- Continue to next round
                     |> ProgramTest.clickButton "Continue?"
-                    |> ProgramTest.clickButton "$100"
+                    |> clickMarker 100
                     -- Validate that the user has the expected cards
                     |> ProgramTest.ensureView
                         (handHasCards 0 [ Card Card.Eight Card.Spades, Card Card.Ten Card.Spades ])
@@ -78,7 +80,7 @@ suite =
                                 , Card Card.Ten Card.Diamonds -- Dealer takes and busts (6+6+10 > 21)
                                 ]
                         )
-                        |> ProgramTest.clickButton "$100"
+                        |> clickMarker 100
                         -- Validate that the user has the expected hand
                         |> ProgramTest.ensureView
                             (Expect.all
@@ -131,7 +133,7 @@ suite =
                                 , Card Card.Ten Card.Hearts -- Dealer takes and busts (6+6+10 > 21)
                                 ]
                         )
-                        |> ProgramTest.clickButton "$100"
+                        |> clickMarker 100
                         -- Validate that the user has the expected hand
                         |> ProgramTest.ensureView
                             (Expect.all
@@ -186,7 +188,7 @@ suite =
                                 , Card Card.Ten Card.Diamonds -- Dealer takes and busts (6+6+10 > 21)
                                 ]
                         )
-                        |> ProgramTest.clickButton "$100"
+                        |> clickMarker 100
                         -- Validate that the user has the expected hand
                         |> ProgramTest.ensureView
                             (Expect.all
@@ -240,7 +242,7 @@ suite =
                                 , Card Card.Ten Card.Diamonds -- Player gets second card on second hand
                                 ]
                         )
-                        |> ProgramTest.clickButton "$100"
+                        |> clickMarker 100
                         |> ProgramTest.ensureView
                             (handHasCards 0 [ Card Card.Eight Card.Diamonds, Card Card.Eight Card.Hearts ])
                         |> ProgramTest.clickButton "Split"
@@ -310,7 +312,7 @@ suite =
                                 , Card Card.Ten Card.Diamonds
                                 ]
                         )
-                        |> ProgramTest.clickButton "$100"
+                        |> clickMarker 100
                         |> ProgramTest.ensureView
                             (Expect.all
                                 [ handHasCards 0 [ Card Card.Five Card.Spades, Card Card.Five Card.Clubs ]
@@ -364,7 +366,7 @@ suite =
                                 ]
                             |> withDelay
                         )
-                        |> ProgramTest.clickButton "$100"
+                        |> clickMarker 100
                         -- Deal a card per 'tick', so four means the dealer and the player has two cards each
                         |> ProgramTest.advanceTime 4
                         |> ProgramTest.clickButton "Double down"
@@ -385,7 +387,7 @@ suite =
                             ]
                         |> withDelay
                     )
-                    |> ProgramTest.clickButton "$100"
+                    |> clickMarker 100
                     -- Deal a card per 'tick', so four means the dealer and the player has two cards each
                     |> ProgramTest.advanceTime 4
                     |> ProgramTest.ensureView
@@ -410,7 +412,7 @@ suite =
                                 ]
                             |> withDelay
                         )
-                        |> ProgramTest.clickButton "$100"
+                        |> clickMarker 100
                         -- Deal a card per 'tick', so three means the dealer has one card and the player has two cards
                         |> ProgramTest.advanceTime 3
                         |> ProgramTest.ensureView (toastHasMessage "Black Jack!")
@@ -437,7 +439,7 @@ suite =
                                 ]
                             |> withDelay
                         )
-                        |> ProgramTest.clickButton "$100"
+                        |> clickMarker 100
                         -- Deal a card per 'tick', so four means the dealer and the player has two cards each
                         |> ProgramTest.advanceTime 4
                         |> ProgramTest.clickButton "Stand"
@@ -656,3 +658,27 @@ start settings =
         }
         |> ProgramTest.withSimulatedEffects (simulateEffects settings.delay)
         |> ProgramTest.start ()
+
+
+
+{- Click on a marker by marker amount
+
+   Required since ProgramTest.clickButton "$100" will match both buttons "$100" and "$1000".
+
+   The following doesn't work either:
+   ```elm
+       ProgramTest.simulateDomEvent
+        (Query.find [ Selector.tag "button", Selector.exactText ("$" ++ String.fromInt amount) ])
+        Test.Html.Event.click
+   ```
+
+   Since the query returns the text node, and not the button itself, and we can't click a text node
+
+-}
+
+
+clickMarker : Int -> ProgramTest.ProgramTest model msg effect -> ProgramTest.ProgramTest model msg effect
+clickMarker amount =
+    ProgramTest.simulateDomEvent
+        (Query.find [ Selector.tag "button", Selector.classes [ "marker", "_" ++ String.fromInt amount ] ])
+        Test.Html.Event.click
