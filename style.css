@@ -594,8 +594,8 @@ button {
 /* CHIP/MARKER */
 
 .marker {
-    max-width: 64px;
-    min-width: 64px;
+    max-width: 60px;
+    min-width: 60px;
     aspect-ratio: 1 / 1;
     border-radius: 50%;
     border: 4px dashed #000;
@@ -609,6 +609,7 @@ button {
     cursor: pointer;
     opacity: 0.8;
     transition: transform 200ms;
+    font-size: 17px;
 
     &:hover {
         opacity: 1;
@@ -637,5 +638,9 @@ button {
         background-color: #000;
         border-color: #fff;
         color: #fff;
+    }
+
+    &._1000 {
+        background-color: rgb(255, 123, 0);
     }
 }

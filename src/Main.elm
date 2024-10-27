@@ -759,7 +759,7 @@ bettingView : Player.Player -> Html.Html Msg
 bettingView { money } =
     let
         markerAmounts =
-            [ 1, 10, 100, 500 ]
+            [ 1, 10, 100, 500, 1000 ]
 
         showAllInButton =
             List.maximum markerAmounts
