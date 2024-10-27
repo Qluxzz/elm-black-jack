@@ -76,21 +76,74 @@ body>div {
     flex-direction: column;
     flex-grow: 1;
     gap: 20px;
+}
 
-    &:before {
+.logo {
+    display: flex;
+
+    .card-inner {
+        top: -100vh;
+
+        border-radius: 10px;
+        border: 1px solid #000;
+        background-color: #fff;
+
+        font-size: 40px;
+
+        .color::before {
+            top: 0;
+        }
+
+        .color::after {
+            bottom: 0;
+        }
+    }
+
+    .character {
         position: absolute;
-        top: -156px;
-        line-height: 1;
-        content: '♠';
-        color: var(--black-suite);
-        font-size: min(100vh, 100vw);
-        z-index: -1;
+        top: 0;
         bottom: 0;
-        left: 0;
-        right: 0;
+        left: 10px;
+        height: 100%;
+        width: 100%;
         display: flex;
         align-items: center;
-        justify-content: center;
+    }
+
+    .card:nth-child(2) .card-inner {
+        animation-delay: 100ms;
+    }
+
+    .card:nth-child(3) .card-inner {
+        animation-delay: 200ms;
+    }
+
+    .card:nth-child(4) .card-inner {
+        animation-delay: 300ms;
+    }
+
+    .card:nth-child(5) .card-inner {
+        animation-delay: 400ms;
+    }
+
+    .card:nth-child(6) .card-inner {
+        animation-delay: 500ms;
+    }
+
+    .card:nth-child(7) .card-inner {
+        animation-delay: 600ms;
+    }
+
+    .card:nth-child(8) .card-inner {
+        animation-delay: 700ms;
+    }
+
+    .card:nth-child(9) .card-inner {
+        animation-delay: 800ms;
+    }
+
+    .card:nth-child(10) .card-inner {
+        animation-delay: 900ms;
     }
 }
 
@@ -210,37 +263,37 @@ body>div {
     &.busted {
         opacity: 0.1;
     }
+}
 
-    /* Nested div for dealers second hidden card */
-    .card-flip {
+/* Nested div for dealers second hidden card */
+.card-flip {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+
+    transform-style: preserve-3d;
+    transition: transform 500ms;
+
+    &.hidden {
+        transform: rotateY(180deg);
+    }
+
+    >.card-front,
+    >.card-back {
         position: absolute;
         width: 100%;
         height: 100%;
+        backface-visibility: hidden;
 
-        transform-style: preserve-3d;
-        transition: transform 500ms;
+        border-radius: 10px;
+        border: 1px solid #000;
+        background-color: #fff;
 
-        &.hidden {
-            transform: rotateY(180deg);
-        }
+    }
 
-        >.card-front,
-        >.card-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
+    >.card-back {
+        transform: rotateY(180deg);
 
-            border-radius: 10px;
-            border: 1px solid #000;
-            background-color: #fff;
-
-        }
-
-        >.card-back {
-            transform: rotateY(180deg);
-
-        }
     }
 }
 

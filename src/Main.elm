@@ -13,6 +13,7 @@ port module Main exposing
     , withPlayers
     )
 
+import Array
 import Browser
 import Card exposing (Card)
 import Cards
@@ -601,8 +602,36 @@ update msg model =
 view : Model -> List (Html.Html Msg)
 view model =
     [ if model.state == MainMenu then
+        let
+            suites =
+                Array.fromList [ Card.Clubs, Card.Diamonds, Card.Spades, Card.Hearts ]
+
+            logoCard : Char -> Html.Html msg
+            logoCard char =
+                Html.div [ Html.Attributes.class "card" ]
+                    [ Html.div [ Html.Attributes.class "card-inner" ]
+                        [ Html.div [ Html.Attributes.class "character" ] [ Html.text (String.fromChar char) ]
+                        , Html.div
+                            [ Html.Attributes.class "color"
+                            , Html.Attributes.class
+                                (Card.suiteToCssClass
+                                    (char
+                                        |> Char.toCode
+                                        |> Basics.modBy (Array.length suites)
+                                        |> (\i ->
+                                                Array.get i suites
+                                                    |> Maybe.map (\s -> Card.Card Card.Ace s)
+                                                    |> Maybe.withDefault (Card.Card Card.Ace Card.Spades)
+                                           )
+                                    )
+                                )
+                            ]
+                            []
+                        ]
+                    ]
+        in
         Html.div [ Html.Attributes.class "main-menu" ]
-            [ Html.h1 [] [ Html.text "BlackJack!" ]
+            [ Html.div [ Html.Attributes.class "logo" ] (List.map logoCard (String.toList "Blackjack!"))
             , Html.p [] [ Html.text <| "Current high score: " ++ (model.highScore |> Maybe.map String.fromInt |> Maybe.map (\s -> "$" ++ s ++ "!") |> Maybe.withDefault "No high score yet!") ]
             , Html.button [ Html.Events.onClick StartNewGame ] [ Html.text "Start new game!" ]
             ]

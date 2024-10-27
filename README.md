@@ -1,6 +1,6 @@
-# Elm Black Jack
+# Elm Blackjack
 
-An implementation of Black Jack in Elm
+An implementation of Blackjack in Elm
 
 ## Testing
 
