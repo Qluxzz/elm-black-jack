@@ -284,7 +284,7 @@ suite =
                         |> withDeck []
                     )
                     |> ProgramTest.ensureViewHas
-                        [ Selector.exactText "$15"
+                        [ Selector.exactText "Balance: $15"
                         , Selector.disabled True
                         , Selector.classes [ "marker", "_500" ]
                         , Selector.classes [ "marker", "_100" ]
@@ -493,7 +493,7 @@ playerHasMoney : Int -> Query.Single msg -> Expect.Expectation
 playerHasMoney amount query =
     query
         |> Query.find [ Selector.class "player-money" ]
-        |> Query.has [ Selector.exactText (toDollars amount) ]
+        |> Query.has [ Selector.exactText ("Balance: " ++ toDollars amount) ]
 
 
 handHasBet : Int -> Int -> Query.Single msg -> Expect.Expectation

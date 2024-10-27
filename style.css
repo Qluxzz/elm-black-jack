@@ -188,6 +188,11 @@ body>div {
         top: 0;
         animation: split-hand 600ms;
     }
+
+    .stats {
+        display: flex;
+        justify-content: space-between;
+    }
 }
 
 @keyframes split-hand {
@@ -263,6 +268,11 @@ body>div {
     &.busted {
         opacity: 0.1;
     }
+
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 /* Nested div for dealers second hidden card */
