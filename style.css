@@ -157,6 +157,23 @@ h6 {
     }
 }
 
+button {
+    padding: 5px;
+    border-radius: 0;
+    border: 2px solid #000;
+    background-color: #fff;
+    cursor: pointer;
+    font-weight: bold;
+    color: #000;
+    font-size: 20px;
+    white-space: nowrap;
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: none;
+    }
+}
+
 .dealer-and-players {
     display: flex;
     flex-direction: column;
@@ -164,6 +181,30 @@ h6 {
     justify-content: space-around;
     align-items: center;
     width: 100%;
+}
+
+.hit-or-stand {
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+
+    button {
+        flex-grow: 1;
+    }
+}
+
+.betting {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+
+    button {
+        flex-grow: 1;
+    }
 }
 
 .actions {
@@ -550,7 +591,8 @@ h6 {
 /* CHIP/MARKER */
 
 .marker {
-    width: 64px;
+    max-width: 64px;
+    min-width: 64px;
     aspect-ratio: 1 / 1;
     border-radius: 50%;
     border: 4px dashed #000;

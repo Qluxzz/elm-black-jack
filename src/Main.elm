@@ -767,10 +767,7 @@ bettingView { money } =
                 |> Maybe.withDefault False
     in
     Html.div
-        [ Html.Attributes.style "display" "flex"
-        , Html.Attributes.style "gap" "10px"
-        , Html.Attributes.style "align-items" "center"
-        ]
+        [ Html.Attributes.class "betting" ]
         ((markerAmounts
             |> List.map
                 (\amount ->
@@ -801,7 +798,7 @@ hitOrStandView { money, hands } =
         allDisabled =
             List.length cards == 1 || state /= Player.Playing
     in
-    Html.div [ Html.Attributes.style "display" "flex", Html.Attributes.style "gap" "10px" ]
+    Html.div [ Html.Attributes.class "hit-or-stand" ]
         [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled allDisabled ] [ Html.text "Hit" ]
         , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled allDisabled ] [ Html.text "Stand" ]
         , if Cards.canSplit cards then
