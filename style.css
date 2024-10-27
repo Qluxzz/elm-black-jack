@@ -106,12 +106,6 @@ h6 {
         padding: 10px;
     }
 
-    dl {
-        list-style: symbols(cyclic "♦" "♣" "♥" "♠");
-        list-style-position: inside;
-        padding-left: 0;
-    }
-
     dt {
         white-space: nowrap;
     }
