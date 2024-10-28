@@ -854,8 +854,10 @@ actionsView state player =
                 Html.div []
                     [ Html.button [ Html.Events.onClick NextRound ]
                         [ Html.text "Continue?" ]
+
+                    -- Hidden quit button used for tests
                     , Html.button
-                        [ Html.Events.onClick QuitToMainMenu ]
+                        [ Html.Events.onClick QuitToMainMenu, Html.Attributes.style "display" "none" ]
                         [ Html.text "Quit?" ]
                     ]
         ]
