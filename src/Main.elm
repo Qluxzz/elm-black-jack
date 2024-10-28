@@ -1020,36 +1020,37 @@ statisticsView statistics =
 -}
 formatWinRate : Float -> String
 formatWinRate value =
-    let
-        factor =
-            10 ^ 2
+    if toFloat (round value) == value then
+        String.fromFloat value
 
-        rounded =
-            round (value * toFloat factor) |> toFloat
+    else
+        let
+            factor =
+                10.0 ^ 2
 
-        adjusted =
-            rounded / toFloat factor
+            rounded =
+                round (value * factor) |> toFloat
 
-        baseString =
-            String.fromFloat adjusted
+            adjusted =
+                rounded / factor
 
-        parts =
-            String.split "." baseString
-    in
-    case parts of
-        [ integerPart ] ->
-            integerPart
+            baseString =
+                String.fromFloat adjusted
 
-        [ integerPart, decimalPart ] ->
-            let
-                paddedDecimals =
-                    String.padRight 2 '0' decimalPart
-            in
-            integerPart ++ "." ++ paddedDecimals
+            parts =
+                String.split "." baseString
+        in
+        case parts of
+            [ integerPart, decimalPart ] ->
+                let
+                    paddedDecimals =
+                        String.padRight 2 '0' decimalPart
+                in
+                integerPart ++ "." ++ paddedDecimals
 
-        _ ->
-            -- Fallback for unexpected cases
-            ""
+            _ ->
+                -- Fallback for unexpected cases
+                ""
 
 
 allPlayers : ( Player.Player, List Player.Player ) -> List Player.Player
