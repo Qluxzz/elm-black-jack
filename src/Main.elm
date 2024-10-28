@@ -671,8 +671,8 @@ update msg model =
                     initalState
             in
             ( { newState | state = Betting, deck = model.deck, highScore = model.highScore, statistics = model.statistics, players = cleared }
-            , if List.length model.deck < 15 then
-                ShuffleDeck_ model.deck
+            , if List.length model.deck < 20 then
+                ShuffleDeck_ (Deck.decks 4)
 
               else
                 NoEffect
