@@ -630,6 +630,16 @@ suite =
                         |> ProgramTest.expectViewHas
                             [ Selector.exactText "Highest balance: $600"
                             ]
+            , test "Win rate is formatted correctly (rounded to two decimals if not a whole number)" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withStatistics (Main.defaultStatistics |> (\s -> { s | wins = 1, loses = 2 }))
+                        )
+                        |> ProgramTest.clickButton "Statistics"
+                        |> ProgramTest.expectViewHas
+                            [ Selector.exactText "Win rate: 33.33%"
+                            ]
             ]
         ]
 
@@ -795,6 +805,11 @@ withPlayers p s =
 withDelay : Settings -> Settings
 withDelay s =
     { s | delay = True }
+
+
+withStatistics : Main.Statistics -> Settings -> Settings
+withStatistics statistics s =
+    { s | statistics = Just statistics }
 
 
 start : Settings -> ProgramTest.ProgramTest Main.Model Main.Msg Main.Effect

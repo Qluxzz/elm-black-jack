@@ -6,6 +6,7 @@ port module Main exposing
     , Model
     , Msg(..)
     , Statistics
+    , defaultStatistics
     , init
     , initWithDeck
     , main
@@ -977,7 +978,7 @@ statisticsView statistics =
             [ { title = "Rounds played", description = Nothing, value = String.fromInt statistics.roundsPlayed }
             , { title = "Hands won", description = Nothing, value = String.fromInt statistics.wins }
             , { title = "Hands lost", description = Nothing, value = String.fromInt statistics.loses }
-            , { title = "Win rate", description = Nothing, value = String.fromFloat (toFloat statistics.wins / (toFloat <| Basics.clamp 1 (statistics.wins + statistics.loses) (statistics.wins + statistics.loses)) * 100) ++ "%" }
+            , { title = "Win rate", description = Nothing, value = formatWinRate (toFloat statistics.wins / (toFloat <| Basics.clamp 1 (statistics.wins + statistics.loses) (statistics.wins + statistics.loses)) * 100) ++ "%" }
             , { title = "Blackjack", description = Nothing, value = String.fromInt statistics.blackjack }
             , { title = "Blackjack push", description = Just "You and the dealer both got blackjack", value = String.fromInt statistics.blackjackPush }
             , { title = "Push", description = Nothing, value = String.fromInt statistics.pushes }
@@ -1013,6 +1014,42 @@ statisticsView statistics =
 
 
 -- HELPER FUNCTIONS
+
+
+{-| If number has decimals, round to two decimals, otherwise just return integer part
+-}
+formatWinRate : Float -> String
+formatWinRate value =
+    let
+        factor =
+            10 ^ 2
+
+        rounded =
+            round (value * toFloat factor) |> toFloat
+
+        adjusted =
+            rounded / toFloat factor
+
+        baseString =
+            String.fromFloat adjusted
+
+        parts =
+            String.split "." baseString
+    in
+    case parts of
+        [ integerPart ] ->
+            integerPart
+
+        [ integerPart, decimalPart ] ->
+            let
+                paddedDecimals =
+                    String.padRight 2 '0' decimalPart
+            in
+            integerPart ++ "." ++ paddedDecimals
+
+        _ ->
+            -- Fallback for unexpected cases
+            ""
 
 
 allPlayers : ( Player.Player, List Player.Player ) -> List Player.Player
