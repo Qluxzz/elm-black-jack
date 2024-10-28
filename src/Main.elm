@@ -695,7 +695,7 @@ update msg model =
 view : Model -> List (Html.Html Msg)
 view model =
     (if model.state == MainMenu then
-        [ mainMenuView model
+        [ mainMenuView
         , if model.showStatistics then
             statisticsView model.statistics
 
@@ -709,7 +709,9 @@ view model =
                 model.players
         in
         [ Html.div [ Html.Attributes.class "game" ]
-            [ Html.div [ Html.Attributes.class "dealer-and-players" ]
+            [ Html.header [] [ Html.p [ Html.Attributes.class "player-money" ] [ Html.text ("Balance: $" ++ String.fromInt currentPlayer.money) ] ]
+            , Html.div
+                [ Html.Attributes.class "dealer-and-players" ]
                 (if model.state /= Betting then
                     dealerView model.dealer model.state
                         :: List.map playerView (allPlayers model.players)
@@ -827,8 +829,7 @@ handView attributes { cards, bet } =
 actionsView : GameState -> Player.Player -> Html.Html Msg
 actionsView state player =
     Html.div [ Html.Attributes.class "actions" ]
-        [ Html.p [ Html.Attributes.class "player-money" ] [ Html.text ("Balance: $" ++ String.fromInt player.money) ]
-        , case state of
+        [ case state of
             MainMenu ->
                 Html.text ""
 
@@ -867,7 +868,7 @@ bettingView : Player.Player -> Html.Html Msg
 bettingView { money } =
     let
         markerAmounts =
-            [ 1, 10, 100, 500, 1000 ]
+            [ 50, 100, 500, 1000 ]
 
         showAllInButton =
             List.maximum markerAmounts
@@ -929,12 +930,12 @@ hitOrStandView { money, hands } =
 toastView : String -> Html.Html msg
 toastView message =
     Html.div [ Html.Attributes.class "toast" ]
-        [ Html.div [ Html.Attributes.class "message " ] [ Html.text message ]
+        [ Html.div [ Html.Attributes.class "message" ] [ Html.text message ]
         ]
 
 
-mainMenuView : Model -> Html.Html Msg
-mainMenuView model =
+mainMenuView : Html.Html Msg
+mainMenuView =
     let
         suites =
             Array.fromList [ Card.Clubs, Card.Diamonds, Card.Spades, Card.Hearts ]

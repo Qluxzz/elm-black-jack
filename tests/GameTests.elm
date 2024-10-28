@@ -23,8 +23,7 @@ suite =
                 start (defaultSettings |> withDeck (Deck.decks 4))
                     -- Betting alternatives
                     |> ProgramTest.ensureViewHas
-                        [ Selector.exactText "$1"
-                        , Selector.exactText "$10"
+                        [ Selector.exactText "$50"
                         , Selector.exactText "$100"
                         , Selector.exactText "$500"
                         , Selector.exactText "$1000"
@@ -282,19 +281,30 @@ suite =
             \_ ->
                 start
                     (defaultSettings
-                        |> withPlayers ( { money = 15 }, [] )
+                        |> withPlayers ( { money = 200 }, [] )
                         |> withDeck []
                     )
                     |> ProgramTest.ensureViewHas
-                        [ Selector.exactText "Balance: $15"
-                        , Selector.disabled True
-                        , Selector.classes [ "marker", "_500" ]
-                        , Selector.classes [ "marker", "_100" ]
+                        [ Selector.exactText "Balance: $200"
+                        , Selector.all
+                            [ Selector.disabled True
+                            , Selector.classes [ "marker", "_500" ]
+                            ]
+                        , Selector.all
+                            [ Selector.disabled True
+                            , Selector.classes
+                                [ "marker", "_1000" ]
+                            ]
                         ]
                     |> ProgramTest.expectViewHas
-                        [ Selector.disabled True
-                        , Selector.classes [ "marker", "_10" ]
-                        , Selector.classes [ "marker", "_1" ]
+                        [ Selector.all
+                            [ Selector.disabled False
+                            , Selector.classes [ "marker", "_50" ]
+                            ]
+                        , Selector.all
+                            [ Selector.disabled False
+                            , Selector.classes [ "marker", "_100" ]
+                            ]
                         ]
         , describe "Double down"
             [ test "Double down works" <|

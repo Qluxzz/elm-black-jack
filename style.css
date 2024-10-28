@@ -65,7 +65,7 @@ h6 {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     justify-content: end;
     gap: 20px;
 }
@@ -119,14 +119,6 @@ h6 {
 .logo {
     display: flex;
 
-    @media (max-width: 550px) {
-        margin-left: 50px;
-
-        .card:not(:first-child) {
-            margin-left: -65px;
-        }
-    }
-
     .card-inner {
         top: -100vh;
 
@@ -154,6 +146,17 @@ h6 {
         width: 100%;
         display: flex;
         align-items: center;
+    }
+
+    @media (max-width: 500px) {
+        .card {
+            max-width: 90px;
+            min-width: 90px;
+        }
+
+        .character {
+            left: 5px;
+        }
     }
 
     .card:nth-child(2) .card-inner {
@@ -200,9 +203,9 @@ button {
     background-color: #fff;
     cursor: pointer;
     font-weight: bold;
-    min-width: 10ch;
+    min-width: 8ch;
     color: #000;
-    font-size: 20px;
+    font-size: 17px;
     white-space: nowrap;
 
     &:disabled {
@@ -221,15 +224,38 @@ button {
     flex-grow: 1;
     justify-content: space-around;
     align-items: center;
-    width: 100%;
+}
+
+header {
+    display: flex;
+    background-color: #083c01;
+    padding: 10px;
+    justify-content: center;
+}
+
+.actions {
+    height: 105px;
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+    align-items: stretch;
+
+    >div {
+        background-color: #083c01;
+        padding: 10px;
+        align-items: center;
+        justify-content: center;
+        display: flex;
+        ;
+
+    }
 }
 
 .hit-or-stand {
     display: flex;
 
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
+    gap: 5px;
 
     @media (max-width: 550px) {
         width: 100%;
@@ -242,29 +268,11 @@ button {
 
 .betting {
     display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: center;
+    gap: 5px;
     flex-wrap: wrap;
 
     button {
         flex-grow: 1;
-    }
-}
-
-.actions {
-    justify-content: center;
-    align-items: center;
-    display: flex;
-    gap: 10px;
-    padding: 10px;
-    min-height: 120px;
-    background-color: #083c01;
-    width: 100%;
-    flex-direction: column;
-
-    @media (min-width: 551px) {
-        flex-direction: row;
     }
 }
 
@@ -639,8 +647,8 @@ button {
 /* CHIP/MARKER */
 
 .marker {
-    max-width: 60px;
-    min-width: 60px;
+    max-width: 59px;
+    min-width: 59px;
     aspect-ratio: 1 / 1;
     border-radius: 50%;
     border: 4px dashed #000;
@@ -667,11 +675,7 @@ button {
     }
 
     /* Values */
-    &._1 {
-        background-color: #fff;
-    }
-
-    &._10 {
+    &._50 {
         background-color: rgb(255, 0, 0);
     }
 
