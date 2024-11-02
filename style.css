@@ -268,10 +268,6 @@ header {
     display: flex;
     gap: 5px;
     flex-wrap: wrap;
-
-    button {
-        flex-grow: 1;
-    }
 }
 
 .hands {
