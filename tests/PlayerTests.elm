@@ -22,6 +22,7 @@ cases =
                     ]
               , state = Player.Standing
               , order = 0
+              , insurance = Player.NotApplicable
               }
             , []
             )
@@ -41,6 +42,7 @@ cases =
                     ]
               , state = Player.Standing
               , order = 0
+              , insurance = Player.NotApplicable
               }
             , []
             )
@@ -60,6 +62,7 @@ cases =
                     ]
               , state = Player.Standing
               , order = 0
+              , insurance = Player.NotApplicable
               }
             , []
             )
@@ -80,6 +83,7 @@ cases =
                     ]
               , state = Player.Standing
               , order = 0
+              , insurance = Player.NotApplicable
               }
             , []
             )
@@ -97,6 +101,7 @@ cases =
               , cards = List.repeat 2 (Card.Card Card.Ten Card.Diamonds)
               , state = Player.Standing
               , order = 0
+              , insurance = Player.NotApplicable
               }
             , []
             )
@@ -113,6 +118,7 @@ cases =
               , cards = List.repeat 3 (Card.Card Card.Ten Card.Diamonds)
               , state = Player.Busted
               , order = 0
+              , insurance = Player.NotApplicable
               }
             , []
             )
@@ -129,6 +135,7 @@ cases =
               , cards = List.repeat 2 (Card.Card Card.Ten Card.Diamonds)
               , state = Player.Standing
               , order = 0
+              , insurance = Player.NotApplicable
               }
             , []
             )
@@ -142,6 +149,7 @@ cases =
               , cards = List.repeat 2 (Card.Card Card.Ten Card.Diamonds)
               , state = Player.Standing
               , order = 0
+              , insurance = Player.NotApplicable
               }
             , []
             )
@@ -159,11 +167,13 @@ cases =
               , cards = List.repeat 2 (Card.Card Card.Ten Card.Diamonds)
               , state = Player.Standing
               , order = 0
+              , insurance = Player.NotApplicable
               }
             , [ { bet = 100
                 , cards = [ Card.Card Card.Ten Card.Diamonds, Card.Card Card.Five Card.Clubs ]
                 , state = Player.Standing
-                , order = 0
+                , order = 1
+                , insurance = Player.NotApplicable
                 }
               ]
             )
@@ -182,11 +192,13 @@ cases =
               , cards = [ Card.Card Card.Ten Card.Diamonds, Card.Card Card.Two Card.Hearts, Card.Card Card.Nine Card.Spades ]
               , state = Player.Standing
               , order = 0
+              , insurance = Player.NotApplicable
               }
             , [ { bet = 100
                 , cards = List.repeat 2 (Card.Card Card.Ten Card.Diamonds)
                 , state = Player.Standing
                 , order = 0
+                , insurance = Player.NotApplicable
                 }
               ]
             )
@@ -205,6 +217,7 @@ cases =
               , cards = List.repeat 2 (Card.Card Card.Two Card.Diamonds)
               , state = Player.Standing
               , order = 0
+              , insurance = Player.NotApplicable
               }
             , []
             )
@@ -222,6 +235,7 @@ cases =
               , cards = List.repeat 3 (Card.Card Card.Ten Card.Diamonds)
               , state = Player.Busted
               , order = 0
+              , insurance = Player.NotApplicable
               }
             , []
             )
@@ -247,8 +261,8 @@ suite =
                             (Player.calculateHandsState dealerHand (Player.Player hands 0 0))
                             (Player.playerHands hands)
                             |> List.foldr
-                                (\( state, { bet } ) acc ->
-                                    acc + Player.calculateWinnings bet state
+                                (\( state, hand ) acc ->
+                                    acc + Player.calculateWinnings hand state
                                 )
                                 0
                             |> Expect.equal expectedWinnings

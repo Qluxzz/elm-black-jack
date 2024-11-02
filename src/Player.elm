@@ -10,11 +10,18 @@ type HandState
     | Busted
 
 
+type Insurance
+    = NotApplicable
+    | Declined
+    | Insured Int
+
+
 type alias Hand =
     { cards : List Card.Card
     , bet : Int
     , state : HandState
     , order : Int
+    , insurance : Insurance -- How much we've insured, currently defaults to 50% of the current bet
     }
 
 
@@ -98,7 +105,7 @@ clearHands player =
 
 emptyHands : ( Hand, List Hand )
 emptyHands =
-    ( { cards = [], bet = 0, state = Playing, order = 0 }, [] )
+    ( { cards = [], bet = 0, state = Playing, insurance = NotApplicable, order = 0 }, [] )
 
 
 next : ( x, List x ) -> ( x, List x )
@@ -155,11 +162,16 @@ calculateHandsState dealerHand { hands } =
         (playerHands hands)
 
 
-calculateWinnings : Int -> HandResult -> Int
-calculateWinnings bet state =
+calculateWinnings : Hand -> HandResult -> Int
+calculateWinnings { bet, insurance } state =
     case state of
         Lost ->
-            -bet
+            case insurance of
+                Insured i ->
+                    -bet + (i * 2)
+
+                _ ->
+                    -bet
 
         Push ->
             bet

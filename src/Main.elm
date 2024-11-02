@@ -26,7 +26,7 @@ import Html.Attributes
 import Html.Events
 import Json.Decode
 import Platform.Cmd as Cmd
-import Player exposing (HandResult(..))
+import Player exposing (HandResult(..), HandState(..), Insurance(..))
 import Process
 import Random
 import Random.List
@@ -95,6 +95,8 @@ type Msg
     | Deal
     | DealerTakesCard
       -- Hit or Stand
+    | BuyInsurance
+    | DeclineInsurance
     | TakeCard
     | Stand
     | Split
@@ -253,7 +255,15 @@ type alias Flags =
 main : Program Flags Model Msg
 main =
     Browser.document
-        { init = init >> Tuple.mapSecond perform
+        { init =
+            \_ ->
+                initWithDeck
+                    [ Card.Card Card.Ten Card.Spades
+                    , Card.Card Card.Ace Card.Spades
+                    , Card.Card Card.King Card.Diamonds
+                    , Card.Card Card.King Card.Clubs
+                    ]
+                    |> Tuple.mapSecond perform
         , view =
             \model ->
                 { title = "♦♣\u{00A0}Blackjack\u{00A0}♥♠"
@@ -391,7 +401,33 @@ update msg model =
             )
 
         {- Hit or Stand -}
-        -- Add card to player hand
+        BuyInsurance ->
+            let
+                currentBet =
+                    currentPlayer |> .hands |> Tuple.first |> .bet
+
+                updatedPlayer =
+                    currentPlayer
+                        |> Player.updateCurrentHand (\h -> { h | insurance = Insured (h.bet // 2), state = Standing })
+                        |> Player.updatePlayer (\p -> { p | money = p.money - currentBet // 2 })
+
+                updatedPlayers =
+                    ( updatedPlayer, players )
+
+                allallPlayersStandingOrBusted_ =
+                    allPlayersStandingOrBusted updatedPlayers
+            in
+            ( { model | players = updatedPlayers }
+            , if allallPlayersStandingOrBusted_ then
+                DealerFinish_
+
+              else
+                NoEffect
+            )
+
+        DeclineInsurance ->
+            ( model, NoEffect )
+
         TakeCard ->
             let
                 ( cards, deck ) =
@@ -472,9 +508,9 @@ update msg model =
                 newHands =
                     case currentHand.cards of
                         [ first, second ] ->
-                            ( { cards = [ first ], bet = currentHand.bet, state = Player.Playing, order = currentHand.order }
+                            ( { currentHand | cards = [ first ] }
                               -- The new hand should always have the order after the current hand
-                            , { cards = [ second ], bet = currentHand.bet, state = Player.Playing, order = currentHand.order + 1 }
+                            , { currentHand | cards = [ second ], order = currentHand.order + 1 }
                                 :: List.map
                                     (\h ->
                                         -- The order can loop around
@@ -594,10 +630,10 @@ update msg model =
                 roundResult : RoundResult
                 roundResult =
                     List.foldr
-                        (\( s, { bet } ) acc ->
+                        (\( s, hand ) acc ->
                             let
                                 w =
-                                    Player.calculateWinnings bet s
+                                    Player.calculateWinnings hand s
                             in
                             case s of
                                 Lost ->
@@ -620,8 +656,8 @@ update msg model =
 
                 win =
                     List.foldr
-                        (\( state, { bet } ) acc ->
-                            acc + Player.calculateWinnings bet state
+                        (\( state, hand ) acc ->
+                            acc + Player.calculateWinnings hand state
                         )
                         0
                         combined
@@ -653,6 +689,9 @@ update msg model =
                     (Just
                         (if noMoney then
                             "You lost the game!"
+
+                         else if win == 0 then
+                            "You got your bet back!"
 
                          else if win < 0 then
                             "You lost $" ++ String.fromInt (abs win) ++ "!"
@@ -723,7 +762,13 @@ view model =
             ]
         ]
     )
-        ++ [ Maybe.map toastView model.toast |> Maybe.withDefault (Html.text "") ]
+        ++ [ if model.state == HitOrStand && canBuyInsurance model.dealer then
+                insuranceView
+
+             else
+                Html.text ""
+           , Maybe.map toastView model.toast |> Maybe.withDefault (Html.text "")
+           ]
 
 
 cardColorAndSuite : Card -> List (Html.Html msg)
@@ -907,6 +952,7 @@ hitOrStandView { money, hands } =
         allDisabled =
             List.length cards == 1 || state /= Player.Playing
     in
+    -- TODO: If dealer has an ace, offer player to buy insurance, costs 50% of the original bet, payout is 2 to 1 if dealer has blackjack
     Html.div [ Html.Attributes.class "hit-or-stand" ]
         [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled allDisabled ] [ Html.text "Hit" ]
         , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled allDisabled ] [ Html.text "Stand" ]
@@ -929,8 +975,21 @@ hitOrStandView { money, hands } =
 
 toastView : String -> Html.Html msg
 toastView message =
-    Html.div [ Html.Attributes.class "toast" ]
+    Html.div [ Html.Attributes.class "overlay" ]
         [ Html.div [ Html.Attributes.class "message" ] [ Html.text message ]
+        ]
+
+
+insuranceView : Html.Html Msg
+insuranceView =
+    Html.div [ Html.Attributes.class "overlay" ]
+        [ Html.div [ Html.Attributes.class "message" ]
+            [ Html.h1 [] [ Html.text "Buy insurance?" ]
+            , Html.div [ Html.Attributes.class "button-group" ]
+                [ Html.button [ Html.Events.onClick BuyInsurance ] [ Html.text "Yes" ]
+                , Html.button [ Html.Events.onClick DeclineInsurance ] [ Html.text "No" ]
+                ]
+            ]
         ]
 
 
@@ -1134,3 +1193,13 @@ withRoundResult { lost, won, blackjack, blackjackPush, push, biggestHandLost, bi
 toDollars : Int -> String
 toDollars amount =
     "$" ++ String.fromInt amount
+
+
+canBuyInsurance : List Card.Card -> Bool
+canBuyInsurance cards =
+    case cards of
+        first :: _ ->
+            first.value == Card.Ace
+
+        _ ->
+            False

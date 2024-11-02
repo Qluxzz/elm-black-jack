@@ -458,6 +458,53 @@ suite =
                         |> ProgramTest.advanceTime 1
                         |> ProgramTest.expectViewHas [ continueButton ]
             ]
+        , describe "Insurance"
+            [ test "You're offered insurance if dealer gets an ace as first card" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck [ Card.Card Card.Ten Card.Spades, Card.Card Card.Ace Card.Spades, Card.Card Card.King Card.Diamonds, Card.Card Card.King Card.Clubs ]
+                            |> withDelay
+                        )
+                        |> clickMarker 100
+                        |> ProgramTest.advanceTime 4
+                        -- Deal four cards
+                        |> ProgramTest.expectViewHas
+                            [ Selector.exactText "Buy insurance?", Selector.exactText "Yes", Selector.exactText "No" ]
+            , test "If you buy insurance and the dealer has a blackjack, it pays out 2 to 1, so you get back your initial bet" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck [ Card.Card Card.Ten Card.Spades, Card.Card Card.Ace Card.Spades, Card.Card Card.King Card.Diamonds, Card.Card Card.King Card.Clubs ]
+                            |> withDelay
+                        )
+                        |> clickMarker 100
+                        |> ProgramTest.advanceTime 4
+                        -- Deal four cards
+                        |> ProgramTest.ensureViewHas
+                            [ Selector.exactText "Buy insurance?", Selector.exactText "Yes", Selector.exactText "No" ]
+                        |> ProgramTest.clickButton "Yes"
+                        |> ProgramTest.advanceTime 2
+                        |> ProgramTest.ensureView (toastHasMessage "You got your bet back!")
+                        |> ProgramTest.expectViewHas [ continueButton ]
+            , test "If you don't buy insurance and the dealer has a blackjack, you lose your bet" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck [ Card.Card Card.Ten Card.Spades, Card.Card Card.Ace Card.Spades, Card.Card Card.King Card.Diamonds, Card.Card Card.King Card.Clubs ]
+                            |> withDelay
+                        )
+                        |> clickMarker 100
+                        |> ProgramTest.advanceTime 4
+                        -- Deal four cards
+                        |> ProgramTest.ensureViewHas
+                            [ Selector.exactText "Buy insurance?", Selector.exactText "Yes", Selector.exactText "No" ]
+                        |> ProgramTest.clickButton "No"
+                        |> ProgramTest.clickButton "Stand"
+                        |> ProgramTest.advanceTime 2
+                        |> ProgramTest.ensureView (toastHasMessage "You lost $100!")
+                        |> ProgramTest.expectViewHas [ continueButton ]
+            ]
         , describe "Statistics"
             [ test "Statistics is updated as expected" <|
                 \_ ->
@@ -715,7 +762,7 @@ continueButton =
 toastHasMessage : String -> Query.Single msg -> Expect.Expectation
 toastHasMessage message query =
     query
-        |> Query.find [ Selector.class "toast" ]
+        |> Query.find [ Selector.class "message" ]
         |> Query.has [ Selector.exactText message ]
 
 
