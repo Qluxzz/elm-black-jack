@@ -470,7 +470,20 @@ suite =
                         |> ProgramTest.advanceTime 4
                         -- Deal four cards
                         |> ProgramTest.expectViewHas
-                            [ Selector.exactText "Buy insurance?", Selector.exactText "Yes", Selector.exactText "No" ]
+                            [ Selector.exactText "Buy insurance?" ]
+            , test "You're not offered insurance if you can't afford it" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck [ Card.Card Card.Ten Card.Spades, Card.Card Card.Ace Card.Spades, Card.Card Card.King Card.Diamonds, Card.Card Card.King Card.Clubs ]
+                            |> withDelay
+                            |> withPlayers ( { money = 100 }, [] )
+                        )
+                        |> clickMarker 100
+                        |> ProgramTest.advanceTime 5
+                        -- Deal four cards
+                        |> ProgramTest.expectViewHasNot
+                            [ Selector.exactText "Buy insurance?" ]
             , test "If you buy insurance and the dealer has a blackjack, it pays out 2 to 1, so you get back your initial bet" <|
                 \_ ->
                     start
@@ -482,7 +495,7 @@ suite =
                         |> ProgramTest.advanceTime 4
                         -- Deal four cards
                         |> ProgramTest.ensureViewHas
-                            [ Selector.exactText "Buy insurance?", Selector.exactText "Yes", Selector.exactText "No" ]
+                            [ Selector.exactText "Buy insurance?" ]
                         |> ProgramTest.clickButton "Yes"
                         |> ProgramTest.advanceTime 2
                         |> ProgramTest.ensureView (toastHasMessage "You got your bet back!")
@@ -498,7 +511,7 @@ suite =
                         |> ProgramTest.advanceTime 4
                         -- Deal four cards
                         |> ProgramTest.ensureViewHas
-                            [ Selector.exactText "Buy insurance?", Selector.exactText "Yes", Selector.exactText "No" ]
+                            [ Selector.exactText "Buy insurance?" ]
                         |> ProgramTest.clickButton "No"
                         |> ProgramTest.clickButton "Stand"
                         |> ProgramTest.advanceTime 2

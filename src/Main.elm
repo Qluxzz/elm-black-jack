@@ -763,7 +763,18 @@ view model =
         ]
     )
         ++ [ if model.state == HitOrStand && canBuyInsurance model.dealer then
-                insuranceView
+                let
+                    currentPlayer =
+                        model.players |> Tuple.first
+
+                    currentBet =
+                        currentPlayer.hands |> Tuple.first |> .bet
+                in
+                if currentPlayer.money > currentBet // 2 then
+                    insuranceView
+
+                else
+                    Html.text ""
 
              else
                 Html.text ""
