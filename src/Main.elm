@@ -202,7 +202,7 @@ initalState =
     { deck = []
     , dealer = []
     , players =
-        ( { money = 500
+        ( { money = 5000
           , hands = Player.emptyHands
           , order = 0
           }
