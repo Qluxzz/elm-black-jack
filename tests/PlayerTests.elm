@@ -258,7 +258,7 @@ suite =
                     \_ ->
                         List.map2
                             Tuple.pair
-                            (Player.calculateHandsState dealerHand (Player.Player hands 0 0))
+                            (Player.calculateHandsState dealerHand (Player.Player hands 0))
                             (Player.playerHands hands)
                             |> List.foldr
                                 (\( state, hand ) acc ->

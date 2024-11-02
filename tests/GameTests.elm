@@ -281,7 +281,7 @@ suite =
             \_ ->
                 start
                     (defaultSettings
-                        |> withPlayers ( { money = 200 }, [] )
+                        |> withPlayer { money = 200 }
                         |> withDeck []
                     )
                     |> ProgramTest.ensureViewHas
@@ -342,7 +342,7 @@ suite =
                 \_ ->
                     start
                         (defaultSettings
-                            |> withPlayers ( { money = 1000 }, [] )
+                            |> withPlayer { money = 1000 }
                             |> withDelay
                             |> withDeck
                                 [ Card Card.Ten Card.Spades
@@ -477,7 +477,7 @@ suite =
                         (defaultSettings
                             |> withDeck [ Card.Card Card.Ten Card.Spades, Card.Card Card.Ace Card.Spades, Card.Card Card.King Card.Diamonds, Card.Card Card.King Card.Clubs ]
                             |> withDelay
-                            |> withPlayers ( { money = 100 }, [] )
+                            |> withPlayer { money = 100 }
                         )
                         |> clickMarker 100
                         |> ProgramTest.advanceTime 5
@@ -843,7 +843,7 @@ simulateEffects delay effect =
 
 type alias Settings =
     { deck : Maybe Deck.Deck
-    , players : Maybe ( { money : Int }, List { money : Int } )
+    , player : Maybe { money : Int }
     , delay : Bool
     , highScore : Maybe Int
     , statistics : Maybe Main.Statistics
@@ -853,7 +853,7 @@ type alias Settings =
 defaultSettings : Settings
 defaultSettings =
     { deck = Nothing
-    , players = Just ( { money = 400 }, [] )
+    , player = Just { money = 400 }
     , delay = False
     , highScore = Nothing
     , statistics = Nothing
@@ -865,9 +865,9 @@ withDeck d s =
     { s | deck = Just d }
 
 
-withPlayers : ( { money : Int }, List { money : Int } ) -> Settings -> Settings
-withPlayers p s =
-    { s | players = Just p }
+withPlayer : { money : Int } -> Settings -> Settings
+withPlayer p s =
+    { s | player = Just p }
 
 
 {-| Makes it so all Process.sleep takes 1 instead of 0 so you can use ProgramTest.advanceTime to advance through the messages
@@ -897,10 +897,10 @@ start settings =
                             }
                 )
                     |> (\( model, effect ) ->
-                            case settings.players of
+                            case settings.player of
                                 Just p ->
                                     ( model, effect )
-                                        |> Main.withPlayers p
+                                        |> Main.withPlayer p
 
                                 Nothing ->
                                     ( model, effect )

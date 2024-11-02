@@ -28,7 +28,6 @@ type alias Hand =
 type alias Player =
     { hands : ( Hand, List Hand )
     , money : Int
-    , order : Int
     }
 
 
