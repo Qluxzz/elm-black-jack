@@ -500,6 +500,22 @@ suite =
                         |> ProgramTest.advanceTime 2
                         |> ProgramTest.ensureView (toastHasMessage "You got your bet back!")
                         |> ProgramTest.expectViewHas [ continueButton ]
+            , test "If you buy insurance and the dealer doesn't have a blackjack, you win the standard amount - the insurance" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck [ Card.Card Card.Ten Card.Spades, Card.Card Card.Ace Card.Spades, Card.Card Card.Seven Card.Diamonds, Card.Card Card.Eight Card.Clubs ]
+                            |> withDelay
+                        )
+                        |> clickMarker 100
+                        |> ProgramTest.advanceTime 4
+                        -- Deal four cards
+                        |> ProgramTest.ensureViewHas
+                            [ Selector.exactText "Buy insurance?" ]
+                        |> ProgramTest.clickButton "Yes"
+                        |> ProgramTest.advanceTime 2
+                        |> ProgramTest.ensureView (toastHasMessage "You got your bet back!")
+                        |> ProgramTest.expectViewHas [ continueButton ]
             , test "If you don't buy insurance and the dealer has a blackjack, you lose your bet" <|
                 \_ ->
                     start

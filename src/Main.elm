@@ -930,7 +930,7 @@ toastView message =
 
 insuranceView : Html.Html Msg
 insuranceView =
-    Html.div [ Html.Attributes.class "overlay" ]
+    Html.div [ Html.Attributes.class "overlay", Html.Attributes.class "interactive" ]
         [ Html.div [ Html.Attributes.class "message" ]
             [ Html.h1 [] [ Html.text "Buy insurance?" ]
             , Html.div [ Html.Attributes.class "button-group" ]
