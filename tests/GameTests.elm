@@ -346,7 +346,7 @@ suite =
                             |> withDelay
                             |> withDeck
                                 [ Card Card.Ten Card.Spades
-                                , Card Card.Ace Card.Spades -- Dealer takes
+                                , Card Card.Ten Card.Spades -- Dealer takes
                                 , Card Card.Two Card.Diamonds
                                 , Card Card.Five Card.Clubs -- Dealer takes
                                 , Card Card.Five Card.Hearts
@@ -452,6 +452,8 @@ suite =
                         |> clickMarker 100
                         -- Deal a card per 'tick', so four means the dealer and the player has two cards each
                         |> ProgramTest.advanceTime 4
+                        -- Don't buy insurance
+                        |> ProgramTest.clickButton "No"
                         |> ProgramTest.clickButton "Stand"
                         |> ProgramTest.advanceTime 1
                         |> ProgramTest.ensureView (dealerHasCards [ Card Card.Ace Card.Hearts, Card Card.Six Card.Spades ])

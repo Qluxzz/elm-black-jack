@@ -239,17 +239,13 @@ header {
     flex-direction: column;
     justify-content: end;
     align-items: stretch;
-
-    >div {
-        background-color: #083c01;
-        padding: 10px;
-        align-items: center;
-        justify-content: center;
-        display: flex;
-    }
 }
 
 .hit-or-stand {
+    background-color: #083c01;
+    padding: 10px;
+    align-items: center;
+    justify-content: center;
     display: flex;
 
     flex-wrap: wrap;
@@ -264,10 +260,26 @@ header {
     }
 }
 
+.end-of-round {
+    background-color: #083c01;
+    padding: 10px;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
 .betting {
     display: flex;
     gap: 5px;
     flex-wrap: wrap;
+    background-color: #083c01;
+    padding: 10px;
+    align-items: center;
+    justify-content: center;
+    display: flex;
 }
 
 .hands {
@@ -353,25 +365,29 @@ h1 {
     animation: fade-in 250ms ease-in-out;
     flex-direction: column;
 
-    &:not(.interactive) {
-        pointer-events: none;
-    }
+    pointer-events: none;
 
     .message {
         display: flex;
         justify-content: center;
         flex-direction: column;
         align-items: center;
-        font-size: 32px;
         font-weight: bold;
+        margin: 10px;
         padding: 10px;
         min-height: 125px;
         min-width: 200px;
         background-color: #fff;
+        gap: 10px;
         color: #000;
         border-radius: 10px;
         box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
         animation: toast 250ms ease-in-out;
+        pointer-events: auto;
+
+        p {
+            max-width: 250px;
+        }
     }
 }
 

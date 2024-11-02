@@ -191,6 +191,7 @@ type GameState
     | ShuffleCards -- Only done at start and if not enough cards left for a new round, TODO: Implement cutting the deck?
     | Betting
     | Dealing
+    | Insurance
     | HitOrStand
     | DealerFinishes
     | Result
@@ -349,7 +350,11 @@ update msg model =
                 | dealer = updatedHand
                 , state =
                     if hasTwoCards then
-                        HitOrStand
+                        if canBuyInsurance updatedHand model.player then
+                            Insurance
+
+                        else
+                            HitOrStand
 
                     else
                         model.state
@@ -385,7 +390,7 @@ update msg model =
             )
 
         DeclineInsurance ->
-            ( model, NoEffect )
+            ( { model | state = HitOrStand }, NoEffect )
 
         TakeCard ->
             let
@@ -702,21 +707,7 @@ view model =
             ]
         ]
     )
-        ++ [ if model.state == HitOrStand && canBuyInsurance model.dealer then
-                let
-                    currentBet =
-                        model.player.hands |> Tuple.first |> .bet
-                in
-                if model.player.money > currentBet // 2 then
-                    insuranceView
-
-                else
-                    Html.text ""
-
-             else
-                Html.text ""
-           , Maybe.map toastView model.toast |> Maybe.withDefault (Html.text "")
-           ]
+        ++ [ Maybe.map toastView model.toast |> Maybe.withDefault (Html.text "") ]
 
 
 cardColorAndSuite : Card -> List (Html.Html msg)
@@ -835,6 +826,9 @@ actionsView state player =
             Dealing ->
                 Html.text ""
 
+            Insurance ->
+                insuranceView
+
             HitOrStand ->
                 hitOrStandView player
 
@@ -845,7 +839,7 @@ actionsView state player =
                 Html.text ""
 
             ContinueToNextRound ->
-                Html.div []
+                Html.div [ Html.Attributes.class "end-of-round" ]
                     [ Html.button [ Html.Events.onClick NextRound ]
                         [ Html.text "Continue?" ]
 
@@ -923,16 +917,15 @@ hitOrStandView { money, hands } =
 
 toastView : String -> Html.Html msg
 toastView message =
-    Html.div [ Html.Attributes.class "overlay" ]
-        [ Html.div [ Html.Attributes.class "message" ] [ Html.text message ]
-        ]
+    Html.div [ Html.Attributes.class "overlay" ] [ Html.div [ Html.Attributes.class "message" ] [ Html.text message ] ]
 
 
 insuranceView : Html.Html Msg
 insuranceView =
-    Html.div [ Html.Attributes.class "overlay", Html.Attributes.class "interactive" ]
+    Html.div [ Html.Attributes.class "overlay" ]
         [ Html.div [ Html.Attributes.class "message" ]
             [ Html.h1 [] [ Html.text "Buy insurance?" ]
+            , Html.p [] [ Html.text "Costs 50% of your bet, if dealer has blackjack, you win your initial bet back" ]
             , Html.div [ Html.Attributes.class "button-group" ]
                 [ Html.button [ Html.Events.onClick BuyInsurance ] [ Html.text "Yes" ]
                 , Html.button [ Html.Events.onClick DeclineInsurance ] [ Html.text "No" ]
@@ -1138,11 +1131,11 @@ toDollars amount =
     "$" ++ String.fromInt amount
 
 
-canBuyInsurance : List Card.Card -> Bool
-canBuyInsurance cards =
+canBuyInsurance : List Card.Card -> Player.Player -> Bool
+canBuyInsurance cards player =
     case cards of
         first :: _ ->
-            first.value == Card.Ace
+            first.value == Card.Ace && (player.money > (player.hands |> Tuple.first |> .bet) // 2)
 
         _ ->
             False
