@@ -917,7 +917,7 @@ hitOrStandView { money, hands } =
 
 toastView : String -> Html.Html msg
 toastView message =
-    Html.div [ Html.Attributes.class "overlay" ] [ Html.div [ Html.Attributes.class "message" ] [ Html.text message ] ]
+    Html.div [ Html.Attributes.class "overlay" ] [ Html.div [ Html.Attributes.class "message" ] [ Html.h1 [] [ Html.text message ] ] ]
 
 
 insuranceView : Html.Html Msg

@@ -328,9 +328,7 @@ header {
     }
 }
 
-h1 {
-    font-size: 22px;
-}
+
 
 .button-group {
     display: flex;
@@ -385,7 +383,12 @@ h1 {
         animation: toast 250ms ease-in-out;
         pointer-events: auto;
 
+        h1 {
+            font-size: 24px;
+        }
+
         p {
+            font-size: 20px;
             max-width: 250px;
         }
     }
