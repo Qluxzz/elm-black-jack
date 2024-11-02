@@ -1,4 +1,4 @@
-module Cards exposing (canSplit, comp, hasBlackJack, toString, value)
+module Cards exposing (canSplit, comp, hasBlackjack, toString, value)
 
 import Card
 
@@ -60,6 +60,6 @@ canSplit cards =
             False
 
 
-hasBlackJack : List Card.Card -> Bool
-hasBlackJack cards =
+hasBlackjack : List Card.Card -> Bool
+hasBlackjack cards =
     List.length cards == 2 && value cards == 21

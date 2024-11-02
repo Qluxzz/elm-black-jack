@@ -261,8 +261,8 @@ suite =
                             (Player.calculateHandsState dealerHand (Player.Player hands 0))
                             (Player.playerHands hands)
                             |> List.foldr
-                                (\( state, hand ) acc ->
-                                    acc + Player.calculateWinnings hand state
+                                (\( state, { bet } ) acc ->
+                                    acc + Player.calculateWinnings bet state
                                 )
                                 0
                             |> Expect.equal expectedWinnings

@@ -439,9 +439,9 @@ suite =
                         (defaultSettings
                             |> withDeck
                                 [ Card Card.Three Card.Diamonds
-                                , Card Card.Ace Card.Hearts -- Dealer card
+                                , Card Card.Six Card.Hearts -- Dealer card
                                 , Card Card.Four Card.Diamonds
-                                , Card Card.Six Card.Spades
+                                , Card Card.Ace Card.Spades
 
                                 -- Extra cards the dealer should not take
                                 , Card Card.Five Card.Diamonds
@@ -452,11 +452,9 @@ suite =
                         |> clickMarker 100
                         -- Deal a card per 'tick', so four means the dealer and the player has two cards each
                         |> ProgramTest.advanceTime 4
-                        -- Don't buy insurance
-                        |> ProgramTest.clickButton "No"
                         |> ProgramTest.clickButton "Stand"
                         |> ProgramTest.advanceTime 1
-                        |> ProgramTest.ensureView (dealerHasCards [ Card Card.Ace Card.Hearts, Card Card.Six Card.Spades ])
+                        |> ProgramTest.ensureView (dealerHasCards [ Card Card.Six Card.Hearts, Card Card.Ace Card.Spades ])
                         |> ProgramTest.advanceTime 1
                         |> ProgramTest.expectViewHas [ continueButton ]
             ]
@@ -499,14 +497,22 @@ suite =
                         |> ProgramTest.ensureViewHas
                             [ Selector.exactText "Buy insurance?" ]
                         |> ProgramTest.clickButton "Yes"
-                        |> ProgramTest.advanceTime 2
+                        |> ProgramTest.advanceTime 1
+                        -- Dealer's second card is shown immediately
+                        |> ProgramTest.ensureView (dealerHasCards [ Card.Card Card.Ace Card.Spades, Card.Card Card.King Card.Clubs ])
+                        |> ProgramTest.advanceTime 1
                         |> ProgramTest.ensureView (toastHasMessage "You got your bet back!")
                         |> ProgramTest.expectViewHas [ continueButton ]
-            , test "If you buy insurance and the dealer doesn't have a blackjack, you win the standard amount - the insurance" <|
+            , test "If you buy insurance and the dealer doesn't have a blackjack, you continue to play as usual" <|
                 \_ ->
                     start
                         (defaultSettings
-                            |> withDeck [ Card.Card Card.Ten Card.Spades, Card.Card Card.Ace Card.Spades, Card.Card Card.Seven Card.Diamonds, Card.Card Card.Eight Card.Clubs ]
+                            |> withDeck
+                                [ Card.Card Card.Ten Card.Spades
+                                , Card.Card Card.Ace Card.Spades -- Dealer takes
+                                , Card.Card Card.Seven Card.Diamonds
+                                , Card.Card Card.Eight Card.Clubs -- Dealer takes
+                                ]
                             |> withDelay
                         )
                         |> clickMarker 100
@@ -515,8 +521,14 @@ suite =
                         |> ProgramTest.ensureViewHas
                             [ Selector.exactText "Buy insurance?" ]
                         |> ProgramTest.clickButton "Yes"
-                        |> ProgramTest.advanceTime 2
-                        |> ProgramTest.ensureView (toastHasMessage "You got your bet back!")
+                        -- Dealer didn't have blackjack, second card is not shown before finishing hit or stand phase
+                        |> ProgramTest.ensureView (toastHasMessage "Dealer didn't have blackjack!")
+                        |> ProgramTest.ensureView dealerSecondCardIsNotVisible
+                        |> ProgramTest.clickButton "Stand"
+                        |> ProgramTest.advanceTime 1
+                        |> ProgramTest.ensureView (dealerHasCards [ Card.Card Card.Ace Card.Spades, Card.Card Card.Eight Card.Clubs ])
+                        |> ProgramTest.advanceTime 1
+                        |> ProgramTest.ensureView (toastHasMessage "You lost $100!")
                         |> ProgramTest.expectViewHas [ continueButton ]
             , test "If you don't buy insurance and the dealer has a blackjack, you lose your bet" <|
                 \_ ->
@@ -531,8 +543,8 @@ suite =
                         |> ProgramTest.ensureViewHas
                             [ Selector.exactText "Buy insurance?" ]
                         |> ProgramTest.clickButton "No"
-                        |> ProgramTest.clickButton "Stand"
                         |> ProgramTest.advanceTime 2
+                        -- Dealer had blackjack, so you lose without having to perform hit/stand/double down
                         |> ProgramTest.ensureView (toastHasMessage "You lost $100!")
                         |> ProgramTest.expectViewHas [ continueButton ]
             ]
@@ -795,6 +807,14 @@ toastHasMessage message query =
     query
         |> Query.find [ Selector.class "message" ]
         |> Query.has [ Selector.exactText message ]
+
+
+dealerSecondCardIsNotVisible : Query.Single msg -> Expect.Expectation
+dealerSecondCardIsNotVisible query =
+    query
+        |> Query.find [ Selector.class "dealer" ]
+        |> Query.find [ Selector.class "cards" ]
+        |> Query.has [ Selector.class "hidden" ]
 
 
 dealerHasCards : List Card.Card -> Query.Single msg -> Expect.Expectation

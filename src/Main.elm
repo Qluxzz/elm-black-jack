@@ -39,7 +39,7 @@ import Task
    Game loop:
 
    All players in the game has to at least bet the minimum of the table
-   The players are dealed two cards, the dealer is dealed two cards, but one is hidden
+   The players are dealt two cards, the dealer is dealt two cards, but one is hidden
 
    Each player is given the choice to take another card or stand,
    When all players are standing or busted, the dealer flips the hidden card.
@@ -198,8 +198,8 @@ type GameState
     | ContinueToNextRound
 
 
-initalState : Model
-initalState =
+initialState : Model
+initialState =
     { deck = []
     , dealer = []
     , player =
@@ -218,7 +218,7 @@ initalState =
 -}
 initWithDeck : Deck.Deck -> ( Model, Effect )
 initWithDeck deck =
-    ( { initalState | deck = deck, state = Betting }, NoEffect )
+    ( { initialState | deck = deck, state = Betting }, NoEffect )
 
 
 withPlayer : { money : Int } -> ( Model, Effect ) -> ( Model, Effect )
@@ -228,7 +228,7 @@ withPlayer { money } ( model, effect ) =
 
 init : Flags -> ( Model, Effect )
 init flags =
-    ( { initalState
+    ( { initialState
         | statistics = Maybe.withDefault defaultStatistics flags.statistics
       }
     , NoEffect
@@ -261,7 +261,7 @@ update msg model =
             ( model, NoEffect )
 
         StartNewGame ->
-            ( { initalState | highScore = model.highScore, statistics = model.statistics }, ShuffleDeck_ (Deck.decks 4) )
+            ( { initialState | highScore = model.highScore, statistics = model.statistics }, ShuffleDeck_ (Deck.decks 4) )
 
         QuitToMainMenu ->
             ( { model | state = MainMenu }, NoEffect )
@@ -307,7 +307,7 @@ update msg model =
                         |> Player.addCards cards
                         |> Player.addToastIfCurrentHandHas
                             (\h ->
-                                if Cards.hasBlackJack h.cards then
+                                if Cards.hasBlackjack h.cards then
                                     Just "Black Jack!"
 
                                 else
@@ -378,11 +378,28 @@ update msg model =
 
                 updatedPlayer =
                     model.player
-                        |> Player.updateCurrentHand (\h -> { h | insurance = Insured (h.bet // 2), state = Standing })
+                        |> Player.updateCurrentHand (\h -> { h | insurance = Insured (h.bet // 2), state = Playing })
                         |> Player.updatePlayer (\p -> { p | money = p.money - currentBet // 2 })
+
+                dealerHasBlackjack =
+                    Cards.hasBlackjack model.dealer
             in
-            ( { model | player = updatedPlayer }
-            , if allHandsStandingOrBusted updatedPlayer then
+            ( { model
+                | player = updatedPlayer
+                , state =
+                    if not dealerHasBlackjack then
+                        HitOrStand
+
+                    else
+                        model.state
+                , toast =
+                    if not dealerHasBlackjack then
+                        Just "Dealer didn't have blackjack!"
+
+                    else
+                        Nothing
+              }
+            , if dealerHasBlackjack then
                 DealerFinish_
 
               else
@@ -390,7 +407,30 @@ update msg model =
             )
 
         DeclineInsurance ->
-            ( { model | state = HitOrStand }, NoEffect )
+            let
+                dealerHasBlackjack =
+                    Cards.hasBlackjack model.dealer
+            in
+            ( { model
+                | state =
+                    if not dealerHasBlackjack then
+                        HitOrStand
+
+                    else
+                        model.state
+                , toast =
+                    if not dealerHasBlackjack then
+                        Just "Dealer didn't have blackjack!"
+
+                    else
+                        Nothing
+              }
+            , if dealerHasBlackjack then
+                DealerFinish_
+
+              else
+                NoEffect
+            )
 
         TakeCard ->
             let
@@ -585,10 +625,10 @@ update msg model =
                 roundResult : RoundResult
                 roundResult =
                     List.foldr
-                        (\( s, hand ) acc ->
+                        (\( s, { bet } ) acc ->
                             let
                                 w =
-                                    Player.calculateWinnings hand s
+                                    Player.calculateWinnings bet s
                             in
                             case s of
                                 Lost ->
@@ -610,9 +650,18 @@ update msg model =
                         combined
 
                 win =
+                    let
+                        dealerHasBlackjack =
+                            Cards.hasBlackjack model.dealer
+                    in
                     List.foldr
-                        (\( state, hand ) acc ->
-                            acc + Player.calculateWinnings hand state
+                        (\( state, { bet, insurance } ) acc ->
+                            case ( dealerHasBlackjack, insurance ) of
+                                ( True, Insured amount ) ->
+                                    acc + Player.calculateWinnings bet state + amount * 2
+
+                                _ ->
+                                    acc + Player.calculateWinnings bet state
                         )
                         0
                         combined
@@ -653,7 +702,7 @@ update msg model =
                     )
 
         NextRound ->
-            ( { initalState
+            ( { initialState
                 | state = Betting
                 , deck = model.deck
                 , highScore = model.highScore
@@ -894,7 +943,6 @@ hitOrStandView { money, hands } =
         allDisabled =
             List.length cards == 1 || state /= Player.Playing
     in
-    -- TODO: If dealer has an ace, offer player to buy insurance, costs 50% of the original bet, payout is 2 to 1 if dealer has blackjack
     Html.div [ Html.Attributes.class "hit-or-stand" ]
         [ Html.button [ Html.Events.onClick TakeCard, Html.Attributes.disabled allDisabled ] [ Html.text "Hit" ]
         , Html.button [ Html.Events.onClick Stand, Html.Attributes.disabled allDisabled ] [ Html.text "Stand" ]

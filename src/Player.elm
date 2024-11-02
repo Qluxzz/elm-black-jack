@@ -137,8 +137,8 @@ calculateHandsState dealerHand { hands } =
                 -- You busted, no win
                 Lost
 
-            else if Cards.hasBlackJack cards then
-                if Cards.hasBlackJack dealerHand then
+            else if Cards.hasBlackjack cards then
+                if Cards.hasBlackjack dealerHand then
                     BlackjackPush
 
                 else
@@ -161,16 +161,11 @@ calculateHandsState dealerHand { hands } =
         (playerHands hands)
 
 
-calculateWinnings : Hand -> HandResult -> Int
-calculateWinnings { bet, insurance } state =
+calculateWinnings : Int -> HandResult -> Int
+calculateWinnings bet state =
     case state of
         Lost ->
-            case insurance of
-                Insured i ->
-                    -bet + (i * 2)
-
-                _ ->
-                    -bet
+            -bet
 
         Push ->
             bet
