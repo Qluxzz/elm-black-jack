@@ -868,9 +868,9 @@ simulateEffects delay effect =
         Main.Winnings_ ->
             setTimeout Main.Winnings
 
-        Main.ClearToast_ ->
+        Main.ClearToast_ id ->
             -- Set 1 here, so we need to manually advance the time to get rid of the toast
-            SimulatedEffect.Process.sleep 1 |> SimulatedEffect.Task.perform (\_ -> Main.ClearToast)
+            SimulatedEffect.Process.sleep 1 |> SimulatedEffect.Task.perform (\_ -> Main.ClearToast id)
 
         Main.UpdateStatistics _ ->
             SimulatedEffect.Cmd.none

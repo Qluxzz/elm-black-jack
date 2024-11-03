@@ -106,7 +106,7 @@ type Msg
     | DealerFinish
     | Winnings
       -- Toast
-    | ClearToast
+    | ClearToast Id
     | ShowStatistics
     | HideStatistics
     | QuitToMainMenu
@@ -120,7 +120,7 @@ type Effect
     | TakeCard_
     | DealerFinish_
     | Winnings_
-    | ClearToast_
+    | ClearToast_ Id
     | UpdateStatistics Statistics
     | Multiple (List Effect)
 
@@ -149,8 +149,8 @@ perform effect =
         Winnings_ ->
             Process.sleep 1000 |> Task.perform (\_ -> Winnings)
 
-        ClearToast_ ->
-            Process.sleep 2000 |> Task.perform (\_ -> ClearToast)
+        ClearToast_ id ->
+            Process.sleep 2000 |> Task.perform (\_ -> ClearToast id)
 
         UpdateStatistics statistics ->
             updateStatistics statistics
@@ -174,12 +174,16 @@ type alias Dealer =
     List Card
 
 
+type alias Id =
+    Int
+
+
 type alias Model =
     { state : GameState
     , deck : Deck.Deck
     , dealer : Dealer
     , player : Player.Player
-    , toast : Maybe String
+    , toasts : List { id : Id, message : String }
     , highScore : Maybe Int
     , statistics : Statistics
     , showStatistics : Bool
@@ -207,7 +211,7 @@ initialState =
         , hands = Player.emptyHands
         }
     , state = MainMenu
-    , toast = Nothing
+    , toasts = []
     , highScore = Nothing
     , statistics = defaultStatistics
     , showStatistics = False
@@ -719,8 +723,8 @@ update msg model =
                 NoEffect
             )
 
-        ClearToast ->
-            ( { model | toast = Nothing }, NoEffect )
+        ClearToast id ->
+            ( { model | toasts = List.filter (\t -> t.id /= id) model.toasts }, NoEffect )
 
         ShowStatistics ->
             ( { model | showStatistics = True }, NoEffect )
@@ -759,7 +763,7 @@ view model =
             ]
         ]
     )
-        ++ [ Maybe.map toastView model.toast |> Maybe.withDefault (Html.text "") ]
+        ++ [ toastView model.toasts ]
 
 
 cardColorAndSuite : Card -> List (Html.Html msg)
@@ -966,9 +970,9 @@ hitOrStandView { money, hands } =
         ]
 
 
-toastView : String -> Html.Html msg
-toastView message =
-    Html.div [ Html.Attributes.class "overlay" ] [ Html.div [ Html.Attributes.class "message" ] [ Html.h1 [] [ Html.text message ] ] ]
+toastView : List { id : Int, message : String } -> Html.Html msg
+toastView toasts =
+    Html.div [ Html.Attributes.class "overlay" ] (List.map (\{ message } -> Html.div [ Html.Attributes.class "message" ] [ Html.h1 [] [ Html.text message ] ]) toasts)
 
 
 insuranceView : Html.Html Msg
@@ -1126,7 +1130,11 @@ withToast : Maybe String -> ( Model, Effect ) -> ( Model, Effect )
 withToast message ( model, effect ) =
     case message of
         Just m ->
-            ( { model | toast = Just m }, Multiple [ effect, ClearToast_ ] )
+            let
+                id =
+                    List.length model.toasts
+            in
+            ( { model | toasts = { id = id, message = m } :: model.toasts }, Multiple [ effect, ClearToast_ id ] )
 
         Nothing ->
             ( model, effect )
