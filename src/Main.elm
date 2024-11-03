@@ -392,12 +392,6 @@ update msg model =
 
                     else
                         model.state
-                , toast =
-                    if not dealerHasBlackjack then
-                        Just "Dealer didn't have blackjack!"
-
-                    else
-                        Nothing
               }
             , if dealerHasBlackjack then
                 DealerFinish_
@@ -405,6 +399,13 @@ update msg model =
               else
                 NoEffect
             )
+                |> withToast
+                    (if not dealerHasBlackjack then
+                        Just "Dealer didn't have blackjack!"
+
+                     else
+                        Nothing
+                    )
 
         DeclineInsurance ->
             let
@@ -418,12 +419,6 @@ update msg model =
 
                     else
                         model.state
-                , toast =
-                    if not dealerHasBlackjack then
-                        Just "Dealer didn't have blackjack!"
-
-                    else
-                        Nothing
               }
             , if dealerHasBlackjack then
                 DealerFinish_
@@ -431,6 +426,13 @@ update msg model =
               else
                 NoEffect
             )
+                |> withToast
+                    (if not dealerHasBlackjack then
+                        Just "Dealer didn't have blackjack!"
+
+                     else
+                        Nothing
+                    )
 
         TakeCard ->
             let
@@ -657,8 +659,9 @@ update msg model =
                     List.foldr
                         (\( state, { bet, insurance } ) acc ->
                             case ( dealerHasBlackjack, insurance ) of
+                                -- Insurance only pays out if the dealer had a blackjack
                                 ( True, Insured amount ) ->
-                                    acc + Player.calculateWinnings bet state + amount * 2
+                                    acc + Player.calculateWinnings bet state + (amount * 2)
 
                                 _ ->
                                     acc + Player.calculateWinnings bet state
