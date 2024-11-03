@@ -85,6 +85,11 @@ type alias Dollars =
     Int
 
 
+type InsuranceAction
+    = BuyInsurance
+    | DeclineInsurance
+
+
 type Msg
     = NoOp
     | StartNewGame
@@ -95,8 +100,7 @@ type Msg
     | Deal
     | DealerTakesCard
       -- Hit or Stand
-    | BuyInsurance
-    | DeclineInsurance
+    | TakeActionOnInsurance InsuranceAction
     | TakeCard
     | Stand
     | Split
@@ -375,49 +379,28 @@ update msg model =
             )
 
         {- Hit or Stand -}
-        BuyInsurance ->
+        TakeActionOnInsurance action ->
             let
-                currentBet =
-                    model.player.hands |> Tuple.first |> .bet
-
-                updatedPlayer =
-                    model.player
-                        |> Player.updateCurrentHand (\h -> { h | insurance = Insured (h.bet // 2), state = Playing })
-                        |> Player.updatePlayer (\p -> { p | money = p.money - currentBet // 2 })
-
                 dealerHasBlackjack =
                     Cards.hasBlackjack model.dealer
+
+                updatedPlayer =
+                    case action of
+                        DeclineInsurance ->
+                            model.player
+
+                        BuyInsurance ->
+                            let
+                                currentBet =
+                                    model.player.hands |> Tuple.first |> .bet
+                            in
+                            model.player
+                                |> Player.updateCurrentHand (\h -> { h | insurance = Insured (h.bet // 2), state = Playing })
+                                |> Player.updatePlayer (\p -> { p | money = p.money - currentBet // 2 })
             in
             ( { model
                 | player = updatedPlayer
                 , state =
-                    if not dealerHasBlackjack then
-                        HitOrStand
-
-                    else
-                        model.state
-              }
-            , if dealerHasBlackjack then
-                DealerFinish_
-
-              else
-                NoEffect
-            )
-                |> withToast
-                    (if not dealerHasBlackjack then
-                        Just "Dealer didn't have blackjack!"
-
-                     else
-                        Nothing
-                    )
-
-        DeclineInsurance ->
-            let
-                dealerHasBlackjack =
-                    Cards.hasBlackjack model.dealer
-            in
-            ( { model
-                | state =
                     if not dealerHasBlackjack then
                         HitOrStand
 
@@ -982,8 +965,8 @@ insuranceView =
             [ Html.h1 [] [ Html.text "Buy insurance?" ]
             , Html.p [] [ Html.text "Costs 50% of your bet, if dealer has blackjack, you win your initial bet back" ]
             , Html.div [ Html.Attributes.class "button-group" ]
-                [ Html.button [ Html.Events.onClick BuyInsurance ] [ Html.text "Yes" ]
-                , Html.button [ Html.Events.onClick DeclineInsurance ] [ Html.text "No" ]
+                [ Html.button [ Html.Events.onClick (TakeActionOnInsurance BuyInsurance) ] [ Html.text "Yes" ]
+                , Html.button [ Html.Events.onClick (TakeActionOnInsurance DeclineInsurance) ] [ Html.text "No" ]
                 ]
             ]
         ]
