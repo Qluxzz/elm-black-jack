@@ -224,8 +224,8 @@ initialState =
 
 {-| Helper method to start with a deterministic deck
 -}
-initWithDeck : Deck.Deck -> ( Model, Effect )
-initWithDeck deck =
+initWithDeck : Deck.Deck -> Flags -> ( Model, Effect )
+initWithDeck deck _ =
     ( { initialState | deck = deck, state = Betting }, NoEffect )
 
 
@@ -401,14 +401,14 @@ update msg model =
             ( { model
                 | player = updatedPlayer
                 , state =
-                    if not dealerHasBlackjack then
-                        HitOrStand
+                    if dealerHasBlackjack then
+                        DealerFinishes
 
                     else
-                        model.state
+                        HitOrStand
               }
             , if dealerHasBlackjack then
-                DealerFinish_
+                Winnings_
 
               else
                 NoEffect

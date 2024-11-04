@@ -500,7 +500,6 @@ suite =
                         |> ProgramTest.advanceTime 1
                         -- Dealer's second card is shown immediately
                         |> ProgramTest.ensureView (dealerHasCards [ Card.Card Card.Ace Card.Spades, Card.Card Card.King Card.Clubs ])
-                        |> ProgramTest.advanceTime 1
                         |> ProgramTest.ensureView (toastHasMessage "You got your bet back!")
                         |> ProgramTest.expectViewHas [ continueButton ]
             , test "If you buy insurance and the dealer doesn't have a blackjack, you continue to play as usual" <|
@@ -543,7 +542,7 @@ suite =
                         |> ProgramTest.ensureViewHas
                             [ Selector.exactText "Buy insurance?" ]
                         |> ProgramTest.clickButton "No"
-                        |> ProgramTest.advanceTime 2
+                        |> ProgramTest.advanceTime 1
                         -- Dealer had blackjack, so you lose without having to perform hit/stand/double down
                         |> ProgramTest.ensureView (toastHasMessage "You lost $100!")
                         |> ProgramTest.expectViewHas [ continueButton ]
@@ -927,7 +926,7 @@ start settings =
             \_ ->
                 (case settings.deck of
                     Just d ->
-                        Main.initWithDeck d
+                        Main.initWithDeck d { statistics = settings.statistics }
 
                     Nothing ->
                         Main.init
