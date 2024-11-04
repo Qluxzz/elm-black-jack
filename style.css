@@ -475,11 +475,11 @@ header {
     margin-left: -60px;
 }
 
-.card:nth-child(1n+2) {
+.card:nth-child(3n) {
     transform: translateY(2px);
 }
 
-.card:nth-child(2n+2) {
+.card:nth-child(3n+2) {
     transform: translateY(-2px);
 }
 
