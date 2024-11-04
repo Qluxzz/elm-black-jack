@@ -251,7 +251,7 @@ type alias Flags =
 main : Program Flags Model Msg
 main =
     Browser.document
-        { init = initWithDeck [ Card.Card Card.Ace Card.Spades, Card.Card Card.Ace Card.Spades, Card.Card Card.King Card.Diamonds, Card.Card Card.King Card.Clubs ] >> Tuple.mapSecond perform
+        { init = init >> Tuple.mapSecond perform
         , view =
             \model ->
                 { title = "♦♣\u{00A0}Blackjack\u{00A0}♥♠"
