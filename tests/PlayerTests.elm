@@ -13,7 +13,7 @@ type alias Case =
 
 cases : List Case
 cases =
-    -- Black Jack
+    -- Blackjack
     [ { hands =
             ( { bet = 100
               , cards =
@@ -33,7 +33,7 @@ cases =
       , expectedWinnings = 300
       }
 
-    -- Both have black jack, push
+    -- Both have blackjack, push
     , { hands =
             ( { bet = 100
               , cards =
@@ -53,7 +53,7 @@ cases =
       , expectedWinnings = 100
       }
 
-    -- Dealer has 21 but not black jack, should still pay out 3 to 2
+    -- Dealer has 21 but not blackjack, should still pay out 3 to 2
     , { hands =
             ( { bet = 100
               , cards =
@@ -74,7 +74,7 @@ cases =
       , expectedWinnings = 300
       }
 
-    -- Dealer busts, player has black jack, should pay out 3 to 2
+    -- Dealer busts, player has blackjack, should pay out 3 to 2
     , { hands =
             ( { bet = 100
               , cards =

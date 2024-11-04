@@ -118,7 +118,7 @@ suite =
                         |> ProgramTest.ensureView (toastHasMessage "You won $600!")
                         |> ProgramTest.ensureView (playerHasMoney 700)
                         |> ProgramTest.expectViewHas [ continueButton ]
-            , test "Splitting and getting black jack (21) does not lock up game" <|
+            , test "Splitting and getting blackjack (21) does not lock up game" <|
                 \_ ->
                     start
                         (defaultSettings
@@ -142,7 +142,7 @@ suite =
                             )
                         |> ProgramTest.clickButton "Split"
                         -- The first hand will be given another card automatically
-                        -- We also get black jack so we should continue to the next hand automatically
+                        -- We also get blackjack so we should continue to the next hand automatically
                         |> ProgramTest.ensureView
                             (Expect.all
                                 [ handHasCards 0 [ Card Card.Ace Card.Diamonds, Card Card.King Card.Hearts ]
@@ -151,7 +151,7 @@ suite =
                                 , handHasBet 1 100
                                 ]
                             )
-                        |> ProgramTest.ensureView (toastHasMessage "Black Jack!")
+                        |> ProgramTest.ensureView (toastHasMessage "Blackjack!")
                         |> ProgramTest.advanceTime 1000
                         -- The second hand is given its second card
                         |> ProgramTest.ensureView
@@ -425,7 +425,7 @@ suite =
                         |> clickMarker 100
                         -- Deal a card per 'tick', so three means the dealer has one card and the player has two cards
                         |> ProgramTest.advanceTime 3
-                        |> ProgramTest.ensureView (toastHasMessage "Black Jack!")
+                        |> ProgramTest.ensureView (toastHasMessage "Blackjack!")
                         -- Make the dealer take the last card
                         |> ProgramTest.advanceTime 2
                         |> ProgramTest.ensureView (dealerHasCards [ Card Card.Four Card.Spades, Card Card.Three Card.Hearts ])
@@ -471,6 +471,18 @@ suite =
                         -- Deal four cards
                         |> ProgramTest.expectViewHas
                             [ Selector.exactText "Buy insurance?" ]
+            , test "You're not offered insurance if you get a blackjack" <|
+                \_ ->
+                    start
+                        (defaultSettings
+                            |> withDeck [ Card.Card Card.Ace Card.Spades, Card.Card Card.Ace Card.Spades, Card.Card Card.King Card.Diamonds, Card.Card Card.King Card.Clubs ]
+                            |> withDelay
+                        )
+                        |> clickMarker 100
+                        |> ProgramTest.advanceTime 3
+                        |> ProgramTest.ensureView (toastHasMessage "Blackjack!")
+                        |> ProgramTest.advanceTime 1
+                        |> ProgramTest.expectViewHasNot [ Selector.exactText "Buy insurance?" ]
             , test "You're not offered insurance if you can't afford it" <|
                 \_ ->
                     start
@@ -943,7 +955,7 @@ start settings =
                                     ( model, effect )
                        )
         , update = Main.update
-        , view = \model -> { title = "Black Jack", body = Main.view model }
+        , view = \model -> { title = "blackjack", body = Main.view model }
         }
         |> ProgramTest.withSimulatedEffects (simulateEffects settings.delay)
         |> ProgramTest.start ()

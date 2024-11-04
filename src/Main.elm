@@ -34,7 +34,7 @@ import Task
 
 
 
-{- Black Jack
+{- Blackjack
 
    Game loop:
 
@@ -251,7 +251,7 @@ type alias Flags =
 main : Program Flags Model Msg
 main =
     Browser.document
-        { init = init >> Tuple.mapSecond perform
+        { init = initWithDeck [ Card.Card Card.Ace Card.Spades, Card.Card Card.Ace Card.Spades, Card.Card Card.King Card.Diamonds, Card.Card Card.King Card.Clubs ] >> Tuple.mapSecond perform
         , view =
             \model ->
                 { title = "♦♣\u{00A0}Blackjack\u{00A0}♥♠"
@@ -316,7 +316,7 @@ update msg model =
                         |> Player.addToastIfCurrentHandHas
                             (\h ->
                                 if Cards.hasBlackjack h.cards then
-                                    Just "Black Jack!"
+                                    Just "Blackjack!"
 
                                 else
                                     Nothing
@@ -436,7 +436,7 @@ update msg model =
                                         Just "Bust!"
 
                                     ( EQ, 2 ) ->
-                                        Just "Black Jack!"
+                                        Just "Blackjack!"
 
                                     _ ->
                                         Nothing
@@ -1177,7 +1177,16 @@ canBuyInsurance : List Card.Card -> Player.Player -> Bool
 canBuyInsurance cards player =
     case cards of
         first :: _ ->
-            first.value == Card.Ace && (player.money > (player.hands |> Tuple.first |> .bet) // 2)
+            let
+                playerHasBlackJack =
+                    Cards.hasBlackjack (player.hands |> Tuple.first |> .cards)
+
+                playerHasEnoughMoney =
+                    player.money > (player.hands |> Tuple.first |> .bet) // 2
+            in
+            (first.value == Card.Ace)
+                && not playerHasBlackJack
+                && playerHasEnoughMoney
 
         _ ->
             False
