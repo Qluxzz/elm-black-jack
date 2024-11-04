@@ -955,7 +955,7 @@ hitOrStandView { money, hands } =
 
 toastView : List { id : Int, message : String } -> Html.Html msg
 toastView toasts =
-    Html.div [ Html.Attributes.class "overlay" ] (List.map (\{ message } -> Html.div [ Html.Attributes.class "message" ] [ Html.h1 [] [ Html.text message ] ]) toasts)
+    Html.div [ Html.Attributes.class "overlay" ] (List.map (\{ message, id } -> Html.div [ Html.Attributes.class "message", Html.Attributes.id <| ("toast-" ++ String.fromInt id) ] [ Html.h1 [] [ Html.text message ] ]) toasts)
 
 
 insuranceView : Html.Html Msg
