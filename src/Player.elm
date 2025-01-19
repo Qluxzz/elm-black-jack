@@ -12,7 +12,6 @@ type HandState
 
 type Insurance
     = NotApplicable
-    | Declined
     | Insured Int
 
 
@@ -57,20 +56,6 @@ switchToNextHandIf cond ({ hands } as p) =
 
     else
         p
-
-
-switchToNextPlayer : ( Player, List Player ) -> ( Player, List Player )
-switchToNextPlayer =
-    next
-
-
-switchToNextPlayerIf : Bool -> ( Player, List Player ) -> ( Player, List Player )
-switchToNextPlayerIf cond =
-    if cond then
-        switchToNextPlayer
-
-    else
-        identity
 
 
 addCards : List Card.Card -> Player -> Player

@@ -196,7 +196,6 @@ type alias Model =
 
 type GameState
     = MainMenu
-    | ShuffleCards -- Only done at start and if not enough cards left for a new round, TODO: Implement cutting the deck?
     | Betting
     | Dealing
     | Insurance
@@ -858,9 +857,6 @@ actionsView state player =
 
             Betting ->
                 bettingView player
-
-            ShuffleCards ->
-                Html.text ""
 
             Dealing ->
                 Html.text ""
