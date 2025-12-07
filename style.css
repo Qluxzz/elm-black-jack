@@ -418,8 +418,6 @@ header {
 }
 
 .dealer {
-    height: 200px;
-
     transition: opacity 500ms;
 
     &.busted {
@@ -469,6 +467,13 @@ header {
 .cards {
     display: flex;
     justify-content: center;
+    /* Only show top of cards on smaller devices */
+    height: 70px;
+    overflow: hidden;
+
+    @media (min-height: 650px) {
+        height: unset;
+    }
 }
 
 .card:not(:first-child) {
