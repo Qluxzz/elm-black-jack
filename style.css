@@ -474,11 +474,11 @@ header {
 }
 
 .card:nth-child(3n) {
-    transform: translateY(2px);
+    --jitter: 2px;
 }
 
 .card:nth-child(3n+2) {
-    transform: translateY(-2px);
+    --jitter: -2px;
 }
 
 
@@ -494,7 +494,7 @@ header {
 
 .card-inner {
     position: absolute;
-    top: -400px;
+    transform: translateY(-400px) rotateZ(-180deg);
     animation: deal-card 600ms ease-out;
     animation-fill-mode: forwards;
     width: 100%;
@@ -503,6 +503,7 @@ header {
     line-height: 1;
     color: #000;
     font-variant-numeric: tabular-nums;
+    margin-top: var(--jitter, 0);
 }
 
 .player .card-inner {
@@ -514,13 +515,12 @@ header {
 
 @keyframes deal-card {
     from {
-        top: -400px;
-        transform: rotateZ(-180deg);
+        transform: translateY(-400px) rotateZ(-180deg);
         filter: opacity(0);
     }
 
     to {
-        top: 0;
+        transform: translateY(0) rotateZ(0);
         filter: opacity(1);
     }
 }
