@@ -839,11 +839,13 @@ playerView player =
 handView : List (Html.Attribute msg) -> Player.Hand -> Html.Html msg
 handView attributes { cards, bet } =
     Html.div (Html.Attributes.class "hand" :: attributes)
-        [ Html.div [ Html.Attributes.class "cards" ]
-            (List.map cardView cards)
-        , Html.div [ Html.Attributes.class "stats" ]
-            [ Html.p [] [ Html.text (String.fromInt (Cards.value cards)) ]
-            , Html.p [] [ Html.text ("$" ++ String.fromInt bet) ]
+        [ Html.div [ Html.Attributes.class "cards-outer" ]
+            [ Html.div [ Html.Attributes.class "cards" ]
+                (List.map cardView cards)
+            , Html.div [ Html.Attributes.class "stats" ]
+                [ Html.p [] [ Html.text (Cards.toString2 (Cards.values cards)) ]
+                , Html.p [] [ Html.text ("$" ++ String.fromInt bet) ]
+                ]
             ]
         ]
 

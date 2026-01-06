@@ -11,10 +11,10 @@ suite =
     describe "largestHandValue"
         [ test "Multiple aces can be counted as both 11 and 1 in same hand" <|
             \_ ->
-                Cards.value [ Card.Card Card.Ace Card.Diamonds, Card.Card Card.Ace Card.Clubs ]
-                    |> Expect.equal 12
+                Cards.values [ Card.Card Card.Ace Card.Diamonds ]
+                    |> Expect.equal (Cards.LowHigh 1 11)
         , test "Triple aces is counted as 13" <|
             \_ ->
-                Cards.value (List.repeat 3 (Card.Card Card.Ace Card.Diamonds))
-                    |> Expect.equal 13
+                Cards.values (List.repeat 3 (Card.Card Card.Ace Card.Diamonds))
+                    |> Expect.equal (Cards.LowHigh 3 33)
         ]

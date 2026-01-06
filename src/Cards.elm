@@ -1,6 +1,27 @@
-module Cards exposing (canSplit, comp, hasBlackjack, toString, value)
+module Cards exposing (HandValue(..), canSplit, comp, hasBlackjack, toString, toString2, value, values)
 
 import Card
+
+
+type HandValue
+    = LowHigh Int Int
+
+
+{-| Get both high and low values of the cards. So in this case two aces will be 2 and not 22
+-}
+values : List Card.Card -> HandValue
+values cards =
+    List.foldr
+        (\card (LowHigh low high) ->
+            case Card.value card of
+                Card.Double low_ high_ ->
+                    LowHigh (low + low_) (high + high_)
+
+                Card.Single v ->
+                    LowHigh (low + v) (high + v)
+        )
+        (LowHigh 0 0)
+        cards
 
 
 {-| Get the highest valid value of the cards
@@ -63,3 +84,12 @@ canSplit cards =
 hasBlackjack : List Card.Card -> Bool
 hasBlackjack cards =
     List.length cards == 2 && value cards == 21
+
+
+toString2 : HandValue -> String
+toString2 (LowHigh low high) =
+    if low == high || high > 21 then
+        String.fromInt low
+
+    else
+        String.fromInt low ++ "/" ++ String.fromInt high
