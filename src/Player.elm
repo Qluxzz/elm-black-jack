@@ -26,6 +26,7 @@ type alias Hand =
 
 type alias Player =
     { hands : ( Hand, List Hand )
+    , strategy : String
     , money : Int
     }
 

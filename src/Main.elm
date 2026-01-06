@@ -16,6 +16,7 @@ port module Main exposing
     , withPlayer
     )
 
+import AST
 import Array
 import Browser
 import Card exposing (Card)
@@ -96,6 +97,7 @@ type Msg
     | ShuffledDeck Deck.Deck
       -- Betting
     | Bet Dollars
+    | UpdateStrategy String
       -- Deal
     | Deal
     | DealerTakesCard
@@ -122,6 +124,9 @@ type Effect
     | Deal_
     | DealerTakesCard_
     | TakeCard_
+    | Stand_
+    | Split_
+    | DoubleDown_
     | DealerFinish_
     | Winnings_
     | ClearToast_ Id
@@ -146,6 +151,15 @@ perform effect =
 
         TakeCard_ ->
             Process.sleep 1000 |> Task.perform (\_ -> TakeCard)
+
+        Stand_ ->
+            Process.sleep 0 |> Task.perform (\_ -> Stand)
+
+        Split_ ->
+            Process.sleep 0 |> Task.perform (\_ -> Split)
+
+        DoubleDown_ ->
+            Process.sleep 0 |> Task.perform (\_ -> DoubleDown)
 
         DealerFinish_ ->
             Process.sleep 1000 |> Task.perform (\_ -> DealerFinish)
@@ -212,6 +226,7 @@ initialState =
     , player =
         { money = 5000
         , hands = Player.emptyHands
+        , strategy = "if player < 17 then hit else stand"
         }
     , state = MainMenu
     , toasts = []
@@ -230,7 +245,7 @@ initWithDeck deck _ =
 
 withPlayer : { money : Int } -> ( Model, Effect ) -> ( Model, Effect )
 withPlayer { money } ( model, effect ) =
-    ( { model | player = Player.Player Player.emptyHands money }, effect )
+    ( { model | player = Player.Player Player.emptyHands "" money }, effect )
 
 
 init : Flags -> ( Model, Effect )
@@ -352,6 +367,32 @@ update msg model =
 
                 hasTwoCards =
                     List.length updatedHand == 2
+
+                action =
+                    (if hasTwoCards then
+                        AST.handAction model.player.strategy (Cards.value (Tuple.first model.player.hands |> .cards)) (Cards.value updatedHand) (Cards.canSplit (Tuple.first model.player.hands |> .cards))
+
+                     else
+                        Err "Nope"
+                    )
+                        |> Result.andThen
+                            (\a ->
+                                Ok
+                                    (case a of
+                                        AST.Hit ->
+                                            TakeCard_
+
+                                        AST.Stand ->
+                                            Stand_
+
+                                        AST.Split ->
+                                            Split_
+
+                                        AST.Double ->
+                                            DoubleDown_
+                                    )
+                            )
+                        |> Result.withDefault NoEffect
             in
             ( { model
                 | dealer = updatedHand
@@ -371,7 +412,7 @@ update msg model =
                 DealerFinish_
 
               else if hasTwoCards then
-                NoEffect
+                action
 
               else
                 Deal_
@@ -714,6 +755,16 @@ update msg model =
         HideStatistics ->
             ( { model | showStatistics = False }, NoEffect )
 
+        UpdateStrategy strategy ->
+            let
+                player =
+                    model.player
+
+                updatedPlayer =
+                    { player | strategy = strategy }
+            in
+            ( { model | player = updatedPlayer }, NoEffect )
+
 
 
 -- VIEWS
@@ -721,29 +772,38 @@ update msg model =
 
 view : Model -> List (Html.Html Msg)
 view model =
-    (if model.state == MainMenu then
-        [ mainMenuView
-        , if model.showStatistics then
-            statisticsView model.statistics
+    (case model.state of
+        MainMenu ->
+            [ mainMenuView
+            , if model.showStatistics then
+                statisticsView model.statistics
 
-          else
-            Html.text ""
-        ]
+              else
+                Html.text ""
+            ]
 
-     else
-        [ Html.div [ Html.Attributes.class "game" ]
-            [ Html.header [] [ Html.p [ Html.Attributes.class "player-money" ] [ Html.text ("Balance: $" ++ String.fromInt model.player.money) ] ]
-            , Html.div
-                [ Html.Attributes.class "dealer-and-players" ]
-                (if model.state /= Betting then
-                    [ dealerView model.dealer model.state, playerView model.player ]
+        Betting ->
+            [ Html.div [ Html.Attributes.style "padding" "10px", Html.Attributes.style "flex-grow" "1", Html.Attributes.style "display" "flex", Html.Attributes.style "flex-direction" "column", Html.Attributes.style "gap" "10px" ]
+                [ Html.textarea [ Html.Events.onInput UpdateStrategy, Html.Attributes.style "width" "100%", Html.Attributes.style "flex-grow" "1", Html.Attributes.style "resize" "none" ]
+                    [ Html.text model.player.strategy ]
+                , Html.button [ Html.Events.onClick (Bet 10) ] [ Html.text "Run!" ]
+                ]
+            ]
 
-                 else
-                    [ Html.text "" ]
-                )
+        _ ->
+            [ Html.div [ Html.Attributes.class "game" ]
+                [ Html.header [] [ Html.p [ Html.Attributes.class "player-money" ] [ Html.text ("Balance: $" ++ String.fromInt model.player.money) ] ]
+                , Html.div
+                    [ Html.Attributes.class "dealer-and-players" ]
+                    (if model.state /= Betting then
+                        [ dealerView model.dealer model.state, playerView model.player ]
+
+                     else
+                        [ Html.text "" ]
+                    )
+                ]
             , actionsView model.state model.player
             ]
-        ]
     )
         ++ [ toastView model.toasts ]
 
