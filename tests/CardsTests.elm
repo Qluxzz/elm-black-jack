@@ -1,4 +1,4 @@
-module CardsTests exposing (..)
+module CardsTests exposing (suite)
 
 import Card
 import Cards

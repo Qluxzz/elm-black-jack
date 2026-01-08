@@ -1,4 +1,4 @@
-module PlayerTests exposing (..)
+module PlayerTests exposing (suite)
 
 import Card
 import Cards

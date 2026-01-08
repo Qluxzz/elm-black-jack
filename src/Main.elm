@@ -25,8 +25,7 @@ import Html
 import Html.Attributes
 import Html.Events
 import Json.Decode
-import Platform.Cmd as Cmd
-import Player exposing (HandResult(..), HandState(..), Insurance(..))
+import Player exposing (Hand, HandResult(..), HandState(..), Insurance(..))
 import Process
 import Random
 import Random.List
@@ -224,8 +223,14 @@ initialState =
 {-| Helper method to start with a deterministic deck
 -}
 initWithDeck : Deck.Deck -> Flags -> ( Model, Effect )
-initWithDeck deck _ =
-    ( { initialState | deck = deck, state = Betting }, NoEffect )
+initWithDeck deck flags =
+    ( { initialState
+        | deck = deck
+        , state = Betting
+        , statistics = Maybe.withDefault defaultStatistics flags.statistics
+      }
+    , NoEffect
+    )
 
 
 withPlayer : { money : Int } -> ( Model, Effect ) -> ( Model, Effect )
@@ -441,9 +446,6 @@ update msg model =
                                         Nothing
                             )
                         |> Tuple.mapFirst (Player.switchToNextHandIf (\h -> List.member h.state [ Player.Standing, Player.Busted ]))
-
-                nextHandHasTwoCards =
-                    updatedPlayer.hands |> Tuple.first |> (\h -> List.length h.cards >= 2)
             in
             ( { model
                 | deck = deck
@@ -452,7 +454,7 @@ update msg model =
             , if allHandsStandingOrBusted updatedPlayer then
                 DealerFinish_
 
-              else if not nextHandHasTwoCards then
+              else if not (handHasTwoCards updatedPlayer.hands) then
                 TakeCard_
 
               else
@@ -466,18 +468,13 @@ update msg model =
                     model.player
                         |> Player.updateCurrentHand (\h -> { h | state = Player.Standing })
                         |> Player.switchToNextHand
-
-                -- Can happen when splitting
-                nextHandHasTwoCards =
-                    updatedPlayer.hands
-                        |> Tuple.first
-                        |> (\h -> List.length h.cards >= 2)
             in
             ( { model | player = updatedPlayer }
             , if allHandsStandingOrBusted updatedPlayer then
                 DealerFinish_
 
-              else if not nextHandHasTwoCards then
+              else if not (handHasTwoCards updatedPlayer.hands) then
+                -- Can happen when splitting
                 TakeCard_
 
               else
@@ -558,11 +555,6 @@ update msg model =
                                     Nothing
                             )
                         |> Tuple.mapFirst Player.switchToNextHand
-
-                nextHandHasTwoCards =
-                    updatedPlayer.hands
-                        |> Tuple.first
-                        |> (\h -> List.length h.cards >= 2)
             in
             ( { model
                 | player = updatedPlayer
@@ -571,7 +563,7 @@ update msg model =
             , if allHandsStandingOrBusted updatedPlayer then
                 DealerFinish_
 
-              else if not nextHandHasTwoCards then
+              else if not (handHasTwoCards updatedPlayer.hands) then
                 TakeCard_
 
               else
@@ -792,7 +784,7 @@ dealerView dealer state =
                 (\i -> hiddenCard (i == 1 && hideSecondCard))
                 dealer
             )
-        , if List.length dealer > 0 then
+        , if not <| List.isEmpty dealer then
             Html.p []
                 [ Html.text
                     (String.fromInt
@@ -1029,7 +1021,7 @@ statisticsView statistics =
     Html.div [ Html.Attributes.class "statistics", Html.Events.onClick HideStatistics ]
         [ Html.div [ Html.Attributes.class "inner", Html.Events.stopPropagationOn "click" (Json.Decode.succeed ( NoOp, True )) ]
             [ Html.dl []
-                (List.map
+                (List.concatMap
                     (\{ title, description, value } ->
                         case description of
                             Just d ->
@@ -1043,7 +1035,6 @@ statisticsView statistics =
                                 [ Html.dt [] [ Html.text (title ++ ": " ++ value) ] ]
                     )
                     list
-                    |> List.concat
                 )
             ]
         ]
@@ -1088,6 +1079,11 @@ formatWinRate value =
             _ ->
                 -- Fallback for unexpected cases
                 ""
+
+
+handHasTwoCards : ( Hand, x ) -> Bool
+handHasTwoCards =
+    Tuple.first >> (\h -> List.length h.cards >= 2)
 
 
 allHands : Player.Player -> List Player.Hand
